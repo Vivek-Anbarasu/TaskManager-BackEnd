@@ -23,10 +23,8 @@ public class TaskServiceImpl implements TaskService {
 	@Override
 	@Transactional
 	public int saveTask(SaveTaskRequest saveRequest) throws Exception {
-		Tasks tasks = new Tasks();
-		tasks.setTitle(saveRequest.getTitle());
-		tasks.setDescription(saveRequest.getDescription());
-		tasks.setStatus(saveRequest.getStatus());
+		Tasks tasks = Tasks.builder().title(saveRequest.getTitle()).
+        description(saveRequest.getDescription()).status(saveRequest.getStatus()).build();
 		Tasks savedTasks = taskRepository.save(tasks);
 		return savedTasks.getTaskId();
 	}

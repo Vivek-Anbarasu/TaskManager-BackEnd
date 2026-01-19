@@ -5,15 +5,11 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.io.Serializable;
 
-
-@Entity
-@Getter @Setter @EqualsAndHashCode 
+@Entity @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class Tasks implements Serializable {
 
 	@Id
