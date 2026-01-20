@@ -6,7 +6,7 @@ import com.restapp.dto.GetTaskResponse;
 import com.restapp.dto.SaveTaskRequest;
 import com.restapp.dto.UpdateTaskRequest;
 import com.restapp.entity.Tasks;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,11 +15,11 @@ import java.util.Optional;
 
 
 @Service
+@RequiredArgsConstructor
 public class TaskServiceImpl implements TaskService {
 	
-	@Autowired
-	TaskRepository taskRepository;
-	
+	private final TaskRepository taskRepository;
+
 	@Override
 	@Transactional
 	public int saveTask(SaveTaskRequest saveRequest) throws Exception {

@@ -11,8 +11,8 @@ import com.restapp.service.TaskService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -25,10 +25,10 @@ import java.util.List;
 @SecurityRequirement(name = "Bearer Authentication")
 @RequestMapping("/v1")
 @Slf4j
+@RequiredArgsConstructor
 public class TaskManagementController{
 
-	@Autowired
-	private TaskService taskService;
+	private final TaskService taskService;
 
 	@GetMapping(path = "/getTask/{taskId}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<GetTaskResponse> getTask(@NotNull(message="TaskId is mandatory") @PathVariable("taskId") Integer taskId) throws InternalServerError,NotFound {

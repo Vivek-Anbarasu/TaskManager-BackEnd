@@ -3,21 +3,24 @@ package com.restapp.service;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.SignatureException;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
 
 import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringBootTest(classes = JWTService.class)
+@TestPropertySource(properties = {
+    "jwt.secret=UMGWByE8Ja/FyDFLqqOnKCN4GiFd+cm01UQnk+HTZjYAOUxTu7tEMyfXTBePrxQ4wNDfcmGymX0KgnS/9FGKvA=="
+})
 class JWTServiceTest {
 
+    @Autowired
     private JWTService jwtService;
 
-    @BeforeEach
-    void setUp() {
-        jwtService = new JWTService();
-    }
 
     @Test
     void generateTokenReturnsNonNullToken() {

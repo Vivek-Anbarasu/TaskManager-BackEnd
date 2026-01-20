@@ -4,8 +4,8 @@ import com.restapp.dto.AuthenticationRequest;
 import com.restapp.entity.UserInfo;
 import com.restapp.service.JWTService;
 import com.restapp.service.RegistrationService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -21,16 +21,12 @@ import java.util.Optional;
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 @RequestMapping("/user")
 @Slf4j
+@RequiredArgsConstructor
 public class UserServicesController {
 
-    @Autowired
-    private RegistrationService registrationService;
-    
-    @Autowired
-    private JWTService jwtService;
-
-    @Autowired
-    private AuthenticationManager authenticationManager;
+    private final RegistrationService registrationService;
+    private final JWTService jwtService;
+    private final AuthenticationManager authenticationManager;
 
     @PostMapping(path = "/new-registration", produces = MediaType.APPLICATION_JSON_VALUE)
     public String addNewUser(@RequestBody UserInfo userInfo) {
