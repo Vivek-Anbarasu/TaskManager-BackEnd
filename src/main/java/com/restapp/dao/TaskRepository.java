@@ -12,10 +12,9 @@ import java.util.Optional;
 public interface TaskRepository extends JpaRepository<Tasks, Long>{
 
 	Optional<Tasks> findByTitle(String title);
-	 
-	 @Lock(LockModeType.PESSIMISTIC_WRITE)
-     Tasks save(Tasks tasks);
-	 
+
+    Tasks save(Tasks tasks);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
 	 Optional<Tasks> findById(Long id);
 }

@@ -24,7 +24,7 @@ public class TaskServiceImpl implements TaskService {
 
 	@Override
 	@Transactional
-	public int saveTask(SaveTaskRequest saveRequest) throws Exception {
+	public int saveTask(SaveTaskRequest saveRequest) {
 		Tasks tasks = Tasks.builder().title(saveRequest.getTitle()).
         description(saveRequest.getDescription()).status(saveRequest.getStatus()).build();
 		Tasks savedTasks = taskRepository.save(tasks);
@@ -33,8 +33,8 @@ public class TaskServiceImpl implements TaskService {
 	}
 
 	@Override
-	@Transactional
-	public GetTaskResponse getTask(Integer taskId) throws Exception{
+	@Transactional(readOnly = true)
+	public GetTaskResponse getTask(Integer taskId) {
 		GetTaskResponse getResponse = null;
 		Optional<Tasks> result = taskRepository.findById(taskId.longValue());
 		if (result.isPresent()) {
@@ -49,15 +49,17 @@ public class TaskServiceImpl implements TaskService {
 
 	@Override
 	@Transactional
-	public boolean deleteTask(Integer TaskId) throws Exception{
-		taskRepository.deleteById(TaskId.longValue());
-		log.info("Deleted task with id={}", TaskId);
+	public boolean deleteTask(Integer taskId) {
+		// Directly delete by id (repository will handle existence). This keeps service simple
+		// and matches unit tests which expect deleteById to be invoked.
+		taskRepository.deleteById(taskId.longValue());
+		log.info("Deleted task with id={}", taskId);
 		return true;
 	}
 
 	@Override
 	@Transactional
-	public boolean updateTask(UpdateTaskRequest updateRequest) throws Exception {
+	public boolean updateTask(UpdateTaskRequest updateRequest) {
 		Optional<Tasks> result = taskRepository.findById(updateRequest.getId().longValue());
 		if (result.isPresent()) {
 			Tasks tasks = result.get();
@@ -73,7 +75,7 @@ public class TaskServiceImpl implements TaskService {
 
 	@Override
 	@Transactional(readOnly = true)
-	public List<GetTaskResponse> getAllTasks() throws Exception {
+	public List<GetTaskResponse> getAllTasks() {
 		List<Tasks> empList = taskRepository.findAll();
 		 return empList.stream().map(tasks -> GetTaskResponse.builder().
 					id(tasks.getTaskId()).title(tasks.getTitle()).
@@ -84,7 +86,7 @@ public class TaskServiceImpl implements TaskService {
 	
 	@Override
 	@Transactional(readOnly = true)
-	public Tasks findByTitle(String title) throws Exception {
+	public Tasks findByTitle(String title) {
 		Optional<Tasks> task = taskRepository.findByTitle(title);
 		if(task.isPresent()) {
     		return task.get();
@@ -92,4 +94,4 @@ public class TaskServiceImpl implements TaskService {
 		return null;
 	}
 
-}
+ }

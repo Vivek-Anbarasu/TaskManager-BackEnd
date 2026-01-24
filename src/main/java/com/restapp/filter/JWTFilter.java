@@ -34,7 +34,7 @@ public class JWTFilter extends OncePerRequestFilter {
             jwtToken = authHeader.substring(7);
             try {
                 email = jwtService.extractEmail(jwtToken);
-            } catch (Exception e) {
+            } catch (io.jsonwebtoken.JwtException e) {
                 log.warn("Failed to extract email from JWT token", e);
             }
         }

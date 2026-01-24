@@ -9,15 +9,15 @@ import java.util.List;
 
 public interface TaskService 
 {
-	int saveTask(SaveTaskRequest saveRequest) throws Exception;
+	int saveTask(SaveTaskRequest saveRequest);
 
-	GetTaskResponse getTask(Integer TaskId)throws Exception;
+	GetTaskResponse getTask(Integer TaskId);
 
-	boolean deleteTask(Integer TaskId)throws Exception;
+	boolean deleteTask(Integer TaskId);
 
-	boolean updateTask(UpdateTaskRequest updateRequest)throws Exception;
-	
-	List<GetTaskResponse> getAllTasks() throws Exception;
-	
-	Tasks findByTitle(String title) throws Exception;
+	boolean updateTask(UpdateTaskRequest updateRequest);
+
+	List<GetTaskResponse> getAllTasks();
+
+	Tasks findByTitle(String title);
 }

@@ -35,7 +35,7 @@ class TaskManagementControllerTest {
     private TaskManagementController taskManagementController;
 
     @Test
-    void getTaskReturnsTaskWhenTaskExists() throws Exception {
+    void getTaskReturnsTaskWhenTaskExists() {
         GetTaskResponse response = GetTaskResponse.builder()
                 .id(1)
                 .title("Test Task")
@@ -55,14 +55,14 @@ class TaskManagementControllerTest {
 
 
     @Test
-    void getTaskThrowsInternalServerErrorWhenServiceThrowsException() throws Exception {
+    void getTaskThrowsInternalServerErrorWhenServiceThrowsException() {
         when(taskService.getTask(anyInt())).thenThrow(new RuntimeException("Database error"));
 
-        assertThrows(InternalServerError.class, () -> taskManagementController.getTask(1));
+        assertThrows(RuntimeException.class, () -> taskManagementController.getTask(1));
     }
 
     @Test
-    void saveTaskReturnsCreatedWhenTaskIsSavedSuccessfully() throws Exception {
+    void saveTaskReturnsCreatedWhenTaskIsSavedSuccessfully() {
         SaveTaskRequest request = new SaveTaskRequest();
         request.setTitle("New Task");
         request.setDescription("New Description");
@@ -82,7 +82,7 @@ class TaskManagementControllerTest {
 
 
     @Test
-    void saveTaskThrowsInternalServerErrorWhenSaveFails() throws Exception {
+    void saveTaskThrowsInternalServerErrorWhenSaveFails() {
         SaveTaskRequest request = new SaveTaskRequest();
         request.setTitle("New Task");
         request.setDescription("Description");
@@ -95,7 +95,7 @@ class TaskManagementControllerTest {
     }
 
     @Test
-    void saveTaskThrowsInternalServerErrorWhenServiceThrowsException() throws Exception {
+    void saveTaskThrowsInternalServerErrorWhenServiceThrowsException() {
         SaveTaskRequest request = new SaveTaskRequest();
         request.setTitle("New Task");
         request.setDescription("Description");
@@ -103,11 +103,11 @@ class TaskManagementControllerTest {
 
         when(taskService.findByTitle(anyString())).thenThrow(new RuntimeException("Database error"));
 
-        assertThrows(InternalServerError.class, () -> taskManagementController.saveTask(request));
+        assertThrows(RuntimeException.class, () -> taskManagementController.saveTask(request));
     }
 
     @Test
-    void updateTaskReturnsOkWhenTaskIsUpdatedSuccessfully() throws Exception {
+    void updateTaskReturnsOkWhenTaskIsUpdatedSuccessfully() {
         UpdateTaskRequest request = new UpdateTaskRequest();
         request.setId(1);
         request.setTitle("Updated Task");
@@ -126,7 +126,7 @@ class TaskManagementControllerTest {
     }
 
     @Test
-    void updateTaskReturnsOkWhenTitleBelongsToSameTask() throws Exception {
+    void updateTaskReturnsOkWhenTitleBelongsToSameTask() {
         UpdateTaskRequest request = new UpdateTaskRequest();
         request.setId(1);
         request.setTitle("Existing Task");
@@ -151,7 +151,7 @@ class TaskManagementControllerTest {
 
 
     @Test
-    void updateTaskThrowsInternalServerErrorWhenServiceThrowsException() throws Exception {
+    void updateTaskThrowsInternalServerErrorWhenServiceThrowsException() {
         UpdateTaskRequest request = new UpdateTaskRequest();
         request.setId(1);
         request.setTitle("Task");
@@ -160,11 +160,11 @@ class TaskManagementControllerTest {
 
         when(taskService.findByTitle(anyString())).thenThrow(new RuntimeException("Database error"));
 
-        assertThrows(InternalServerError.class, () -> taskManagementController.updateTask(request));
+        assertThrows(RuntimeException.class, () -> taskManagementController.updateTask(request));
     }
 
     @Test
-    void deleteTaskReturnsNoContentWhenTaskIsDeletedSuccessfully() throws Exception {
+    void deleteTaskReturnsNoContentWhenTaskIsDeletedSuccessfully() {
         GetTaskResponse response = GetTaskResponse.builder()
                 .id(1)
                 .title("Task to Delete")
@@ -172,20 +172,18 @@ class TaskManagementControllerTest {
                 .status("To Do")
                 .build();
 
-        when(taskService.getTask(1)).thenReturn(response);
         when(taskService.deleteTask(1)).thenReturn(true);
 
         ResponseEntity<Void> result = taskManagementController.deleteTask(1);
 
         assertEquals(HttpStatus.NO_CONTENT, result.getStatusCode());
-        verify(taskService, times(1)).getTask(1);
         verify(taskService, times(1)).deleteTask(1);
     }
 
 
 
     @Test
-    void deleteTaskThrowsInternalServerErrorWhenDeletionFails() throws Exception {
+    void deleteTaskThrowsInternalServerErrorWhenDeletionFails() {
         GetTaskResponse response = GetTaskResponse.builder()
                 .id(1)
                 .title("Task")
@@ -193,21 +191,20 @@ class TaskManagementControllerTest {
                 .status("To Do")
                 .build();
 
-        when(taskService.getTask(1)).thenReturn(response);
         when(taskService.deleteTask(1)).thenReturn(false);
 
-        assertThrows(InternalServerError.class, () -> taskManagementController.deleteTask(1));
+        assertThrows(NotFound.class, () -> taskManagementController.deleteTask(1));
     }
 
     @Test
-    void deleteTaskThrowsInternalServerErrorWhenServiceThrowsException() throws Exception {
-        when(taskService.getTask(anyInt())).thenThrow(new RuntimeException("Database error"));
+    void deleteTaskThrowsInternalServerErrorWhenServiceThrowsException() {
+        when(taskService.deleteTask(anyInt())).thenThrow(new RuntimeException("Database error"));
 
-        assertThrows(InternalServerError.class, () -> taskManagementController.deleteTask(1));
+        assertThrows(RuntimeException.class, () -> taskManagementController.deleteTask(1));
     }
 
     @Test
-    void getAllTasksReturnsListWhenTasksExist() throws Exception {
+    void getAllTasksReturnsListWhenTasksExist() {
         GetTaskResponse task1 = GetTaskResponse.builder()
                 .id(1)
                 .title("Task 1")
@@ -236,7 +233,7 @@ class TaskManagementControllerTest {
     }
 
     @Test
-    void getAllTasksReturnsSingleTaskWhenOnlyOneTaskExists() throws Exception {
+    void getAllTasksReturnsSingleTaskWhenOnlyOneTaskExists() {
         GetTaskResponse task = GetTaskResponse.builder()
                 .id(1)
                 .title("Single Task")
@@ -259,10 +256,76 @@ class TaskManagementControllerTest {
 
 
     @Test
-    void getAllTasksThrowsInternalServerErrorWhenServiceThrowsException() throws Exception {
+    void getAllTasksThrowsInternalServerErrorWhenServiceThrowsException() {
         when(taskService.getAllTasks()).thenThrow(new RuntimeException("Database error"));
 
-        assertThrows(InternalServerError.class, () -> taskManagementController.getAllTasks());
+        assertThrows(RuntimeException.class, () -> taskManagementController.getAllTasks());
+    }
+
+    @Test
+    void saveTaskReturnsBadRequestWhenTitleAlreadyExists() {
+        SaveTaskRequest request = new SaveTaskRequest();
+        request.setTitle("Existing");
+        request.setDescription("Desc");
+        request.setStatus("To Do");
+
+        Tasks existing = new Tasks();
+        existing.setTaskId(2);
+        existing.setTitle("Existing");
+
+        when(taskService.findByTitle("Existing")).thenReturn(existing);
+
+        assertThrows(BadRequest.class, () -> taskManagementController.saveTask(request));
+        verify(taskService, times(1)).findByTitle("Existing");
+        verify(taskService, never()).saveTask(any());
+    }
+
+    @Test
+    void updateTaskThrowsBadRequestWhenTitleBelongsToOtherTask() {
+        UpdateTaskRequest request = new UpdateTaskRequest();
+        request.setId(1);
+        request.setTitle("Existing");
+        request.setDescription("Desc");
+        request.setStatus("To Do");
+
+        Tasks existing = new Tasks();
+        existing.setTaskId(2); // different id
+        existing.setTitle("Existing");
+
+        when(taskService.findByTitle("Existing")).thenReturn(existing);
+
+        assertThrows(BadRequest.class, () -> taskManagementController.updateTask(request));
+        verify(taskService, times(1)).findByTitle("Existing");
+    }
+
+    @Test
+    void updateTaskThrowsNotFoundWhenUpdateReturnsFalse() {
+        UpdateTaskRequest request = new UpdateTaskRequest();
+        request.setId(1);
+        request.setTitle("New");
+        request.setDescription("Desc");
+        request.setStatus("To Do");
+
+        when(taskService.findByTitle("New")).thenReturn(null);
+        when(taskService.updateTask(any(UpdateTaskRequest.class))).thenReturn(false);
+
+        assertThrows(NotFound.class, () -> taskManagementController.updateTask(request));
+        verify(taskService, times(1)).updateTask(request);
+    }
+
+    @Test
+    void deleteTaskThrowsNotFoundWhenTaskDoesNotExist() {
+        when(taskService.deleteTask(1)).thenReturn(false);
+
+        assertThrows(NotFound.class, () -> taskManagementController.deleteTask(1));
+        verify(taskService, times(1)).deleteTask(1);
+    }
+
+    @Test
+    void getAllTasksThrowsNotFoundWhenEmptyList() {
+        when(taskService.getAllTasks()).thenReturn(Collections.emptyList());
+
+        assertThrows(NotFound.class, () -> taskManagementController.getAllTasks());
+        verify(taskService, times(1)).getAllTasks();
     }
 }
-

@@ -66,9 +66,7 @@ class UserServicesControllerTest {
 
         when(registrationService.findByEmail("existing@example.com")).thenReturn(Optional.of(existingUser));
 
-        String result = userServicesController.addNewUser(userReq);
-
-        assertEquals("Email already registered, please use a different email", result);
+        assertThrows(com.restapp.exception.BadRequest.class, () -> userServicesController.addNewUser(userReq));
         verify(registrationService, times(1)).findByEmail("existing@example.com");
         verify(registrationService, never()).addUser(any());
     }
@@ -150,10 +148,7 @@ class UserServicesControllerTest {
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
         when(jwtService.generateToken("user@example.com")).thenReturn(null);
 
-        ResponseEntity<?> result = userServicesController.authenticate(authRequest);
-
-        assertEquals(HttpStatus.FORBIDDEN, result.getStatusCode());
-        assertEquals("Email/Password is not valid", result.getBody());
+        assertThrows(com.restapp.exception.Unauthorized.class, () -> userServicesController.authenticate(authRequest));
         verify(registrationService, never()).findByEmail(anyString());
     }
 

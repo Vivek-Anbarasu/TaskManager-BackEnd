@@ -36,8 +36,8 @@ public class UserServicesController {
     	Optional<UserInfo> optuserInfo = registrationService.findByEmail(userReq.getEmail());
 
     	if(optuserInfo.isPresent()) {
-			return "Email already registered, please use a different email";
-		}
+            throw new com.restapp.exception.BadRequest("Email already registered, please use a different email");
+        }
 
         UserInfo userInfo = new UserInfo();
         userInfo.setEmail(userReq.getEmail());
@@ -54,24 +54,24 @@ public class UserServicesController {
     public ResponseEntity<?> authenticate(@RequestBody AuthenticationRequest authRequest) {
 
     	log.info("Authenticate request recieved for "+authRequest.email());
-        Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authRequest.email(), authRequest.password()));
+         Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authRequest.email(), authRequest.password()));
 
-        String jwtToken = jwtService.generateToken(authRequest.email());
-        String name = "";
-        if(jwtToken != null){
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(jwtToken);
+         String jwtToken = jwtService.generateToken(authRequest.email());
+         String name = "";
+         if(jwtToken != null){
+             HttpHeaders headers = new HttpHeaders();
+             headers.setBearerAuth(jwtToken);
 
-            Optional<UserInfo> optuserInfo = registrationService.findByEmail(authRequest.email());
+             Optional<UserInfo> optuserInfo = registrationService.findByEmail(authRequest.email());
 
-            if(optuserInfo.isPresent()) {
-                name = optuserInfo.get().getFirstname() +" "+ optuserInfo.get().getLastname();
-            }
+             if(optuserInfo.isPresent()) {
+                 name = optuserInfo.get().getFirstname() +" "+ optuserInfo.get().getLastname();
+             }
 
-            return new ResponseEntity<>(name,headers, HttpStatus.OK);
-        }else{
-            return new ResponseEntity<>("Email/Password is not valid",HttpStatus.FORBIDDEN);
-        }
+             return new ResponseEntity<>(name,headers, HttpStatus.OK);
+         }else{
+            throw new com.restapp.exception.Unauthorized("Email/Password is not valid");
+         }
 
     }
     
