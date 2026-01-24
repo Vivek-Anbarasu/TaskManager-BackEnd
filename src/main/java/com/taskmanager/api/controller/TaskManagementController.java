@@ -21,26 +21,25 @@ import java.util.List;
 
 @RestController
 @SecurityRequirement(name = "Bearer Authentication")
-@RequestMapping("/v1")
+@RequestMapping("/task")
 @Slf4j
 @RequiredArgsConstructor
 public class TaskManagementController{
 
 	private final TaskService taskService;
 
-
-
-	@GetMapping(path = "/getTask/{taskId}", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<GetTaskResponse> getTask(@NotNull(message="TaskId is mandatory") @PathVariable("taskId") Integer taskId) {
-		GetTaskResponse getResponse = taskService.getTask(taskId);
+	@GetMapping(path = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<GetTaskResponse> getTask(@NotNull(message="TaskId is mandatory") @PathVariable("id") Integer id) {
+        log.info("Get request received for taskId = {}", id);
+		GetTaskResponse getResponse = taskService.getTask(id);
 		if (getResponse == null) {
-			log.info("No records found for taskId = {}", taskId);
-			throw new NotFound("No records found for taskId = " + taskId);
+			log.info("No records found for taskId = {}", id);
+			throw new NotFound("No records found for taskId = " + id);
 		}
 		return new ResponseEntity<>(getResponse, HttpStatus.OK);
 	}
 
-	@PostMapping(path = "/saveTask", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+	@PostMapping(path = "/", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> saveTask(@Valid @RequestBody SaveTaskRequest saveRequest) {
 		Tasks tasks = taskService.findByTitle(saveRequest.getTitle());
 		if (tasks != null) {
@@ -56,7 +55,7 @@ public class TaskManagementController{
 		return new ResponseEntity<>(String.valueOf(taskId), HttpStatus.CREATED);
 	}
 
-	@PutMapping(path = "/updateTask", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+	@PutMapping(path = "/", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> updateTask(@Valid @RequestBody UpdateTaskRequest updateRequest) {
 		log.info("Update request received for taskId = {}", updateRequest.getId());
 		Tasks tasks = taskService.findByTitle(updateRequest.getTitle());
@@ -73,7 +72,7 @@ public class TaskManagementController{
 		throw new NotFound("No records found for taskId = " + updateRequest.getId());
 	}
 
-	@DeleteMapping("/deleteTask/{id}")
+	@DeleteMapping("/{id}")
 	public ResponseEntity<Void> deleteTask(@NotNull(message="TaskId is mandatory") @PathVariable("id") Integer id) {
         log.info("Delete request received for taskId = {}", id);
         boolean response = taskService.deleteTask(id);
@@ -85,8 +84,9 @@ public class TaskManagementController{
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
-	@GetMapping(path = "/getAllTasks" , produces = MediaType.APPLICATION_JSON_VALUE)
+	@GetMapping(path = "/" , produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<List<GetTaskResponse>> getAllTasks() {
+        log.info("Get all tasks request received");
 		List<GetTaskResponse> responseList = taskService.getAllTasks();
 		if (responseList == null || responseList.isEmpty()) {
 			log.info("No records found");

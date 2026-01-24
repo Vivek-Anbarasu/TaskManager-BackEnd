@@ -43,9 +43,9 @@ public class SecurityConfiguration {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http.csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-        		.authorizeHttpRequests(auth -> auth
-        				.requestMatchers("/user/**","/v3/api-docs/**", "/swagger-ui/**","/actuator/**").permitAll()
-        				.requestMatchers("/v1/**")
+				.authorizeHttpRequests(auth -> auth
+						.requestMatchers("/user/**","/v3/api-docs/**", "/swagger-ui/**","/actuator/**").permitAll()
+						.requestMatchers("/task/**")
                         .authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
