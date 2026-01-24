@@ -1,6 +1,7 @@
 package com.restapp.controller;
 
 import com.restapp.dto.AuthenticationRequest;
+import com.restapp.dto.UserRegistrationRequest;
 import com.restapp.entity.UserInfo;
 import com.restapp.service.JWTService;
 import com.restapp.service.RegistrationService;
@@ -29,15 +30,23 @@ public class UserServicesController {
     private final AuthenticationManager authenticationManager;
 
     @PostMapping(path = "/new-registration", produces = MediaType.APPLICATION_JSON_VALUE)
-    public String addNewUser(@RequestBody UserInfo userInfo) {
+    public String addNewUser(@RequestBody UserRegistrationRequest userReq) {
 
-        log.info("Registering email: " + userInfo.getEmail());
+        log.info("Registering email: " + userReq.getEmail());
 
-    	Optional<UserInfo> optuserInfo = registrationService.findByEmail(userInfo.getEmail());
+    	Optional<UserInfo> optuserInfo = registrationService.findByEmail(userReq.getEmail());
 
     	if(optuserInfo.isPresent()) {
-    		return "Email already registered, please use a different email";
-    	}
+			return "Email already registered, please use a different email";
+		}
+
+        UserInfo userInfo = new UserInfo();
+        userInfo.setEmail(userReq.getEmail());
+        userInfo.setPassword(userReq.getPassword());
+        userInfo.setCountry(userReq.getCountry());
+        userInfo.setRoles(userReq.getRoles());
+        userInfo.setFirstname(userReq.getFirstname());
+        userInfo.setLastname(userReq.getLastname());
 
         return registrationService.addUser(userInfo);
     }

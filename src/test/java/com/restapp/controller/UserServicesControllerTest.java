@@ -1,6 +1,7 @@
 package com.restapp.controller;
 
 import com.restapp.dto.AuthenticationRequest;
+import com.restapp.dto.UserRegistrationRequest;
 import com.restapp.entity.UserInfo;
 import com.restapp.service.JWTService;
 import com.restapp.service.RegistrationService;
@@ -44,34 +45,28 @@ class UserServicesControllerTest {
 
     @Test
     void addNewUserSuccessfullyRegistersNewUser() {
-        UserInfo userInfo = new UserInfo();
-        userInfo.setEmail("newuser@example.com");
-        userInfo.setPassword("password123");
-        userInfo.setFirstname("John");
-        userInfo.setLastname("Doe");
+        UserRegistrationRequest userReq = new UserRegistrationRequest("newuser@example.com", "password123", null, null, "John", "Doe");
 
         when(registrationService.findByEmail("newuser@example.com")).thenReturn(Optional.empty());
-        when(registrationService.addUser(userInfo)).thenReturn("User registered successfully");
+        when(registrationService.addUser(any(UserInfo.class))).thenReturn("User registered successfully");
 
-        String result = userServicesController.addNewUser(userInfo);
+        String result = userServicesController.addNewUser(userReq);
 
         assertEquals("User registered successfully", result);
         verify(registrationService, times(1)).findByEmail("newuser@example.com");
-        verify(registrationService, times(1)).addUser(userInfo);
+        verify(registrationService, times(1)).addUser(any(UserInfo.class));
     }
 
     @Test
     void addNewUserReturnsErrorMessageWhenEmailAlreadyExists() {
-        UserInfo userInfo = new UserInfo();
-        userInfo.setEmail("existing@example.com");
-        userInfo.setPassword("password123");
+        UserRegistrationRequest userReq = new UserRegistrationRequest("existing@example.com", "password123", null, null, null, null);
 
         UserInfo existingUser = new UserInfo();
         existingUser.setEmail("existing@example.com");
 
         when(registrationService.findByEmail("existing@example.com")).thenReturn(Optional.of(existingUser));
 
-        String result = userServicesController.addNewUser(userInfo);
+        String result = userServicesController.addNewUser(userReq);
 
         assertEquals("Email already registered, please use a different email", result);
         verify(registrationService, times(1)).findByEmail("existing@example.com");
@@ -80,14 +75,12 @@ class UserServicesControllerTest {
 
     @Test
     void addNewUserHandlesNullEmail() {
-        UserInfo userInfo = new UserInfo();
-        userInfo.setEmail(null);
-        userInfo.setPassword("password123");
+        UserRegistrationRequest userReq = new UserRegistrationRequest(null, "password123", null, null, null, null);
 
         when(registrationService.findByEmail(null)).thenReturn(Optional.empty());
-        when(registrationService.addUser(userInfo)).thenReturn("User registered successfully");
+        when(registrationService.addUser(any(UserInfo.class))).thenReturn("User registered successfully");
 
-        String result = userServicesController.addNewUser(userInfo);
+        String result = userServicesController.addNewUser(userReq);
 
         assertEquals("User registered successfully", result);
         verify(registrationService, times(1)).findByEmail(null);
@@ -228,21 +221,14 @@ class UserServicesControllerTest {
 
     @Test
     void addNewUserWithCompleteUserInformation() {
-        UserInfo userInfo = new UserInfo();
-        userInfo.setEmail("complete@example.com");
-        userInfo.setPassword("securePassword");
-        userInfo.setFirstname("Complete");
-        userInfo.setLastname("User");
-        userInfo.setCountry("USA");
-        userInfo.setRoles("USER");
+        UserRegistrationRequest userReq = new UserRegistrationRequest("complete@example.com", "securePassword", "USA", "USER", "Complete", "User");
 
         when(registrationService.findByEmail("complete@example.com")).thenReturn(Optional.empty());
-        when(registrationService.addUser(userInfo)).thenReturn("Registration successful");
+        when(registrationService.addUser(any(UserInfo.class))).thenReturn("Registration successful");
 
-        String result = userServicesController.addNewUser(userInfo);
+        String result = userServicesController.addNewUser(userReq);
 
         assertEquals("Registration successful", result);
-        verify(registrationService, times(1)).addUser(userInfo);
+        verify(registrationService, times(1)).addUser(any(UserInfo.class));
     }
 }
-
