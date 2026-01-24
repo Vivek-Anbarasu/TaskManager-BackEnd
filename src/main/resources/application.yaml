@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:postgresql://127.0.0.1:5432/taskdb
     username: postgres
-    password: 
+    password: vivek
 
   jpa:
     hibernate:
@@ -31,3 +31,8 @@ management:
           - "info"
           - "metrics"
           - "env"
+
+# CORS configuration (externalized)
+cors:
+  allowed-origins: http://localhost:5173,http://localhost:3000,http://localhost:*
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
