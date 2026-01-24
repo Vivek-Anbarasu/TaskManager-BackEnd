@@ -1,6 +1,7 @@
 package com.restapp.exception;
 
 import io.swagger.v3.oas.annotations.Hidden;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,7 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 @Hidden
+@Slf4j
 public class TaskManagementExceptionHandler {
 	
 	    @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -20,6 +22,7 @@ public class TaskManagementExceptionHandler {
 	       List list = ex.getBindingResult().getAllErrors().stream()
 	               .map(fieldError -> fieldError.getDefaultMessage())
 	               .collect(Collectors.toList());
+	        log.warn("Validation failed: {}", list);
 	        return new ResponseEntity<>(list, HttpStatus.BAD_REQUEST);
 	    }
 	 
@@ -30,6 +33,7 @@ public class TaskManagementExceptionHandler {
 	       ErrorResponse response =  new ErrorResponse();
 	       response.setCode(400);
 	       response.setMessage(ex.getMessage());
+	        log.warn("BadRequest: {}", ex.getMessage());
 	        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 	    }
 	    
@@ -40,6 +44,7 @@ public class TaskManagementExceptionHandler {
 	       ErrorResponse response =  new ErrorResponse();
 	       response.setCode(500);
 	       response.setMessage(ex.getMessage());
+	        log.error("InternalServerError: {}", ex.getMessage(), ex);
 	        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 	    }
 	    
@@ -50,6 +55,7 @@ public class TaskManagementExceptionHandler {
 	       ErrorResponse response =  new ErrorResponse();
 	       response.setCode(404);
 	       response.setMessage(ex.getMessage());
+	        log.info("NotFound: {}", ex.getMessage());
 	        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
 	    }
 }

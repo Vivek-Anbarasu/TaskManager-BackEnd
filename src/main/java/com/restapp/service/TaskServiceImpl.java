@@ -7,6 +7,7 @@ import com.restapp.dto.SaveTaskRequest;
 import com.restapp.dto.UpdateTaskRequest;
 import com.restapp.entity.Tasks;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,7 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TaskServiceImpl implements TaskService {
 	
 	private final TaskRepository taskRepository;
@@ -26,6 +28,7 @@ public class TaskServiceImpl implements TaskService {
 		Tasks tasks = Tasks.builder().title(saveRequest.getTitle()).
         description(saveRequest.getDescription()).status(saveRequest.getStatus()).build();
 		Tasks savedTasks = taskRepository.save(tasks);
+		log.info("Saved task with id={} title={}", savedTasks.getTaskId(), savedTasks.getTitle());
 		return savedTasks.getTaskId();
 	}
 
@@ -48,6 +51,7 @@ public class TaskServiceImpl implements TaskService {
 	@Transactional
 	public boolean deleteTask(Integer TaskId) throws Exception{
 		taskRepository.deleteById(TaskId.longValue());
+		log.info("Deleted task with id={}", TaskId);
 		return true;
 	}
 
@@ -61,6 +65,7 @@ public class TaskServiceImpl implements TaskService {
 			tasks.setDescription(updateRequest.getDescription());
 			tasks.setStatus(updateRequest.getStatus());
 			taskRepository.save(tasks);
+			log.info("Updated task id={} title={}", updateRequest.getId(), updateRequest.getTitle());
 			return true;
 		}
 		return false;
@@ -81,7 +86,6 @@ public class TaskServiceImpl implements TaskService {
 	@Transactional(readOnly = true)
 	public Tasks findByTitle(String title) throws Exception {
 		Optional<Tasks> task = taskRepository.findByTitle(title);
-		  System.out.println("findByTitle ");
 		if(task.isPresent()) {
     		return task.get();
     	}

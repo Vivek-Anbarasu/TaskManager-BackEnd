@@ -7,6 +7,7 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import lombok.extern.slf4j.Slf4j;
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashMap;
@@ -14,6 +15,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 @Component
+@Slf4j
 public class JWTService {
 
     @Value("${jwt.secret}")
@@ -40,6 +42,7 @@ public class JWTService {
 
     public String generateToken(String email){
         Map<String,Object> claims = new HashMap<>();
+        log.debug("Generating JWT token for email={}", email);
         return Jwts.builder().claims(claims).subject(email).issuedAt(new Date(System.currentTimeMillis())).expiration(new Date(System.currentTimeMillis()+TOKEN_VALIDITY))
                 .signWith(getSigningKey()).compact();
     }

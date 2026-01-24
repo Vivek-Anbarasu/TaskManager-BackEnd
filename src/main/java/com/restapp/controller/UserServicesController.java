@@ -54,7 +54,7 @@ public class UserServicesController {
     @PostMapping(path = "/authenticate", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> authenticate(@RequestBody AuthenticationRequest authRequest) {
 
-    	System.out.println("Authenticate request recieved for "+authRequest.email());
+    	log.info("Authenticate request recieved for "+authRequest.email());
         Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authRequest.email(), authRequest.password()));
 
         String jwtToken = jwtService.generateToken(authRequest.email());

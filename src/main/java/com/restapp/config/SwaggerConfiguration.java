@@ -11,6 +11,7 @@ import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
+import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.customizers.OperationCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,6 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 
 @Configuration
+@Slf4j
 public class SwaggerConfiguration {
 
 	public static final ApiResponse internalServerApiResponse;
@@ -53,7 +55,7 @@ public class SwaggerConfiguration {
 			badRequestStringSchema.setExample(new ObjectMapper().writeValueAsString(error400));
 			notFoundStringSchema.setExample(new ObjectMapper().writeValueAsString(error404));
 		} catch (Exception e) {
-			e.printStackTrace();
+			log.error("Failed to serialize ErrorResponse examples for Swagger", e);
 		}
 		
 		internalServerApiResponse = new ApiResponse().description("Internal Server Error").
