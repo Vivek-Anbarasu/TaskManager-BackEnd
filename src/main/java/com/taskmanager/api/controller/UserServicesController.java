@@ -37,7 +37,7 @@ public class UserServicesController {
     @PostMapping(path = "/new-registration", produces = MediaType.APPLICATION_JSON_VALUE)
     public String addNewUser(@RequestBody UserRegistrationRequest userReq) {
 
-        log.info("Registering email: " + userReq.getEmail());
+        log.info("Registering email: {}", userReq.getEmail());
 
     	Optional<UserInfo> optuserInfo = registrationService.findByEmail(userReq.getEmail());
 
@@ -73,24 +73,16 @@ public class UserServicesController {
     @PostMapping(path = "/authenticate", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> authenticate(@RequestBody AuthenticationRequest authRequest) {
 
-    	 log.info("Authenticate request recieved for "+authRequest.email());
+        log.info("Authenticate request received for {}", authRequest.email());
          Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authRequest.email(), authRequest.password()));
          SecurityContextHolder.getContext().setAuthentication(authentication);
          Set<String> roles = getCurrentUserRoles();
          Map<String,String> claims = Map.of("role", String.join(",", roles));
          String jwtToken = jwtService.generateToken(authRequest.email(),claims);
-         String name = "";
          if(jwtToken != null){
              HttpHeaders headers = new HttpHeaders();
              headers.setBearerAuth(jwtToken);
-
-             Optional<UserInfo> optionalUserInfo = registrationService.findByEmail(authRequest.email());
-
-             if(optionalUserInfo.isPresent()) {
-                 name = optionalUserInfo.get().getFirstname() +" "+ optionalUserInfo.get().getLastname();
-             }
-             return new ResponseEntity<>(name,headers, HttpStatus.OK);
-
+             return new ResponseEntity<>("Authentication successful for "+authRequest.email(), headers, HttpStatus.OK);
          }else{
             throw new com.taskmanager.exception.Unauthorized("Email/Password is not valid");
          }

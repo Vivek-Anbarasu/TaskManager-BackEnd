@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 import javax.crypto.SecretKey;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -44,6 +43,19 @@ public class JWTService {
     }
 
     public Boolean validateToken(String tokenEmail, String databaseEmail, String jwtToken) {
+        // Verify the algorithm in the token header is HS512
+        String algorithm = Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(jwtToken)
+                .getHeader()
+                .getAlgorithm();
+
+        if (algorithm == null || !algorithm.equals("HS512")) {
+            log.warn("Invalid algorithm in JWT token. Expected HS512, but got: {}", algorithm);
+            return false;
+        }
+
         return (tokenEmail.equals(databaseEmail) && !extractExpiration(jwtToken).before(new Date()));
     }
 
