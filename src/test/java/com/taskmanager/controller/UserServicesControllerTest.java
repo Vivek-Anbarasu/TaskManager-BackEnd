@@ -98,7 +98,7 @@ class UserServicesControllerTest {
         ResponseEntity<?> result = userServicesController.authenticate(authRequest);
 
         assertEquals(HttpStatus.OK, result.getStatusCode());
-        assertEquals("Authentication successful for user@example.com", result.getBody());
+        assertEquals("user@example.com", result.getBody());
         assertNotNull(result.getHeaders().get(HttpHeaders.AUTHORIZATION));
         assertEquals("Bearer jwt-token-12345", result.getHeaders().getFirst(HttpHeaders.AUTHORIZATION));
         verify(authenticationManager, times(1)).authenticate(any(UsernamePasswordAuthenticationToken.class));
@@ -116,7 +116,7 @@ class UserServicesControllerTest {
         ResponseEntity<?> result = userServicesController.authenticate(authRequest);
 
         assertEquals(HttpStatus.OK, result.getStatusCode());
-        assertEquals("Authentication successful for user@example.com", result.getBody());
+        assertEquals("user@example.com", result.getBody());
     }
 
     @Test
@@ -130,7 +130,7 @@ class UserServicesControllerTest {
         ResponseEntity<?> result = userServicesController.authenticate(authRequest);
 
         assertEquals(HttpStatus.OK, result.getStatusCode());
-        assertEquals("Authentication successful for user@example.com", result.getBody());
+        assertEquals("user@example.com", result.getBody());
         assertNotNull(result.getHeaders().get(HttpHeaders.AUTHORIZATION));
     }
 

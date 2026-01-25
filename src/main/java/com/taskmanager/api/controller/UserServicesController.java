@@ -67,7 +67,7 @@ public class UserServicesController {
          if(jwtToken != null){
              HttpHeaders headers = new HttpHeaders();
              headers.setBearerAuth(jwtToken);
-             return new ResponseEntity<>("Authentication successful for "+authRequest.email(), headers, HttpStatus.OK);
+             return new ResponseEntity<>(authRequest.email(), headers, HttpStatus.OK);
          }else{
             throw new com.taskmanager.exception.Unauthorized("Email/Password is not valid");
          }
