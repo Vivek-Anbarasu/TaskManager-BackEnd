@@ -43,7 +43,7 @@ public class UserServicesController {
         userInfo.setEmail(userReq.getEmail());
         userInfo.setPassword(userReq.getPassword());
         userInfo.setCountry(userReq.getCountry());
-        userInfo.setRoles(userReq.getRoles());
+        userInfo.setRole(userReq.getRole());
         userInfo.setFirstname(userReq.getFirstname());
         userInfo.setLastname(userReq.getLastname());
 
