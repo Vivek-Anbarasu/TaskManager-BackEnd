@@ -26,9 +26,10 @@ public class AuditingConfiguration {
         public Optional<String> getCurrentAuditor() {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-            if (authentication == null || !authentication.isAuthenticated()) {
-                // Return a default value for unauthenticated requests (like from tests or public endpoints)
-                return Optional.of("system");
+            if (authentication == null || !authentication.isAuthenticated() ||
+                authentication.getPrincipal().equals("anonymousUser")) {
+                // Return a default value for unauthenticated requests while registering users
+                return Optional.of("Anonymous User");
             }
 
             // Extract the username/email from the authentication principal
