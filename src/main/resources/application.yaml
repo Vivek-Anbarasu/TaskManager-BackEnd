@@ -1,5 +1,8 @@
 jwt:
   secret: UMGWByE8Ja/FyDFLqqOnKCN4GiFd+cm01UQnk+HTZjYAOUxTu7tEMyfXTBePrxQ4wNDfcmGymX0KgnS/9FGKvA==
+  issuer: https://taskmanager-app.com/user/authenticate
+  expiration-ms: 900000 # 15 minutes
+  audience: https://taskmanager-app.com
 
 spring:
   application:

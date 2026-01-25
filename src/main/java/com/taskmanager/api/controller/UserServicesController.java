@@ -14,9 +14,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/user")
@@ -50,25 +56,41 @@ public class UserServicesController {
         return registrationService.addUser(userInfo);
     }
 
+    public static Set<String> getCurrentUserRoles() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication != null && authentication.isAuthenticated()) {
+            Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
+            Set<String> roles = authorities.stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toSet());
+            return roles;
+        } else {
+            return Set.of();
+        }
+    }
+
     @PostMapping(path = "/authenticate", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> authenticate(@RequestBody AuthenticationRequest authRequest) {
 
-    	log.info("Authenticate request recieved for "+authRequest.email());
+    	 log.info("Authenticate request recieved for "+authRequest.email());
          Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authRequest.email(), authRequest.password()));
-
-         String jwtToken = jwtService.generateToken(authRequest.email());
+         SecurityContextHolder.getContext().setAuthentication(authentication);
+         Set<String> roles = getCurrentUserRoles();
+         Map<String,String> claims = Map.of("role", String.join(",", roles));
+         String jwtToken = jwtService.generateToken(authRequest.email(),claims);
          String name = "";
          if(jwtToken != null){
              HttpHeaders headers = new HttpHeaders();
              headers.setBearerAuth(jwtToken);
 
-             Optional<UserInfo> optuserInfo = registrationService.findByEmail(authRequest.email());
+             Optional<UserInfo> optionalUserInfo = registrationService.findByEmail(authRequest.email());
 
-             if(optuserInfo.isPresent()) {
-                 name = optuserInfo.get().getFirstname() +" "+ optuserInfo.get().getLastname();
+             if(optionalUserInfo.isPresent()) {
+                 name = optionalUserInfo.get().getFirstname() +" "+ optionalUserInfo.get().getLastname();
              }
-
              return new ResponseEntity<>(name,headers, HttpStatus.OK);
+
          }else{
             throw new com.taskmanager.exception.Unauthorized("Email/Password is not valid");
          }

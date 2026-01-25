@@ -31,7 +31,7 @@ class UserDetailsServiceImplTest {
         userInfo.setId(1);
         userInfo.setEmail("user@example.com");
         userInfo.setPassword("password123");
-        userInfo.setRoles("ROLE_USER");
+        userInfo.setRole("ROLE_USER");
         userInfo.setFirstname("John");
         userInfo.setLastname("Doe");
 
@@ -65,7 +65,7 @@ class UserDetailsServiceImplTest {
         userInfo.setId(2);
         userInfo.setEmail("admin@example.com");
         userInfo.setPassword("adminpass");
-        userInfo.setRoles("ROLE_USER,ROLE_ADMIN");
+        userInfo.setRole("ROLE_USER,ROLE_ADMIN");
 
         when(repository.findByEmail("admin@example.com")).thenReturn(Optional.of(userInfo));
 
@@ -108,7 +108,7 @@ class UserDetailsServiceImplTest {
         UserInfo userInfo = new UserInfo();
         userInfo.setEmail("test@example.com");
         userInfo.setPassword("testpass");
-        userInfo.setRoles("ROLE_USER");
+        userInfo.setRole("ROLE_USER");
 
         when(repository.findByEmail("test@example.com")).thenReturn(Optional.of(userInfo));
 
@@ -124,7 +124,7 @@ class UserDetailsServiceImplTest {
         UserInfo userInfo = new UserInfo();
         userInfo.setEmail(specialEmail);
         userInfo.setPassword("password");
-        userInfo.setRoles("ROLE_USER");
+        userInfo.setRole("ROLE_USER");
 
         when(repository.findByEmail(specialEmail)).thenReturn(Optional.of(userInfo));
 
@@ -141,7 +141,7 @@ class UserDetailsServiceImplTest {
         UserInfo userInfo = new UserInfo();
         userInfo.setEmail(email);
         userInfo.setPassword("password");
-        userInfo.setRoles("ROLE_USER");
+        userInfo.setRole("ROLE_USER");
 
         when(repository.findByEmail(email)).thenReturn(Optional.of(userInfo));
 

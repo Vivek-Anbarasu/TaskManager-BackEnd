@@ -151,7 +151,7 @@ class RegistrationServiceTest {
         userInfo.setFirstname("Jane");
         userInfo.setLastname("Smith");
         userInfo.setCountry("USA");
-        userInfo.setRoles("ROLE_USER");
+        userInfo.setRole("ROLE_USER");
 
         when(passwordEncoder.encode("password")).thenReturn("encodedPassword");
         when(repository.save(any(UserInfo.class))).thenAnswer(invocation -> {
@@ -160,7 +160,7 @@ class RegistrationServiceTest {
             assertEquals("Jane", savedUser.getFirstname());
             assertEquals("Smith", savedUser.getLastname());
             assertEquals("USA", savedUser.getCountry());
-            assertEquals("ROLE_USER", savedUser.getRoles());
+            assertEquals("ROLE_USER", savedUser.getRole());
             return savedUser;
         });
 

@@ -94,7 +94,7 @@ class UserServicesControllerTest {
         userInfo.setLastname("Smith");
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
-        when(jwtService.generateToken("user@example.com")).thenReturn("jwt-token-12345");
+        when(jwtService.generateToken(eq("user@example.com"), any())).thenReturn("jwt-token-12345");
         when(registrationService.findByEmail("user@example.com")).thenReturn(Optional.of(userInfo));
 
         ResponseEntity<?> result = userServicesController.authenticate(authRequest);
@@ -104,7 +104,7 @@ class UserServicesControllerTest {
         assertNotNull(result.getHeaders().get(HttpHeaders.AUTHORIZATION));
         assertEquals("Bearer jwt-token-12345", result.getHeaders().getFirst(HttpHeaders.AUTHORIZATION));
         verify(authenticationManager, times(1)).authenticate(any(UsernamePasswordAuthenticationToken.class));
-        verify(jwtService, times(1)).generateToken("user@example.com");
+        verify(jwtService, times(1)).generateToken(eq("user@example.com"), any());
     }
 
     @Test
@@ -117,7 +117,7 @@ class UserServicesControllerTest {
         userInfo.setLastname(null);
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
-        when(jwtService.generateToken("user@example.com")).thenReturn("jwt-token-12345");
+        when(jwtService.generateToken(eq("user@example.com"), any())).thenReturn("jwt-token-12345");
         when(registrationService.findByEmail("user@example.com")).thenReturn(Optional.of(userInfo));
 
         ResponseEntity<?> result = userServicesController.authenticate(authRequest);
@@ -131,7 +131,7 @@ class UserServicesControllerTest {
         AuthenticationRequest authRequest = new AuthenticationRequest("user@example.com", "password123");
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
-        when(jwtService.generateToken("user@example.com")).thenReturn("jwt-token-12345");
+        when(jwtService.generateToken(eq("user@example.com"), any())).thenReturn("jwt-token-12345");
         when(registrationService.findByEmail("user@example.com")).thenReturn(Optional.empty());
 
         ResponseEntity<?> result = userServicesController.authenticate(authRequest);
@@ -146,7 +146,7 @@ class UserServicesControllerTest {
         AuthenticationRequest authRequest = new AuthenticationRequest("user@example.com", "password123");
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
-        when(jwtService.generateToken("user@example.com")).thenReturn(null);
+        when(jwtService.generateToken(eq("user@example.com"), any())).thenReturn(null);
 
         assertThrows(com.taskmanager.exception.Unauthorized.class, () -> userServicesController.authenticate(authRequest));
         verify(registrationService, never()).findByEmail(anyString());
@@ -160,7 +160,7 @@ class UserServicesControllerTest {
                 .thenThrow(new BadCredentialsException("Invalid credentials"));
 
         assertThrows(BadCredentialsException.class, () -> userServicesController.authenticate(authRequest));
-        verify(jwtService, never()).generateToken(anyString());
+        verify(jwtService, never()).generateToken(anyString(), any());
     }
 
     @Test
@@ -168,7 +168,7 @@ class UserServicesControllerTest {
         AuthenticationRequest authRequest = new AuthenticationRequest("", "password123");
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
-        when(jwtService.generateToken("")).thenReturn("jwt-token-12345");
+        when(jwtService.generateToken(eq(""), any())).thenReturn("jwt-token-12345");
         when(registrationService.findByEmail("")).thenReturn(Optional.empty());
 
         ResponseEntity<?> result = userServicesController.authenticate(authRequest);
@@ -182,7 +182,7 @@ class UserServicesControllerTest {
         AuthenticationRequest authRequest = new AuthenticationRequest("user@example.com", "");
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
-        when(jwtService.generateToken("user@example.com")).thenReturn("jwt-token-12345");
+        when(jwtService.generateToken(eq("user@example.com"), any())).thenReturn("jwt-token-12345");
         when(registrationService.findByEmail("user@example.com")).thenReturn(Optional.empty());
 
         ResponseEntity<?> result = userServicesController.authenticate(authRequest);
@@ -201,7 +201,7 @@ class UserServicesControllerTest {
         userInfo.setLastname("User");
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
-        when(jwtService.generateToken("test@example.com")).thenReturn("valid-token");
+        when(jwtService.generateToken(eq("test@example.com"), any())).thenReturn("valid-token");
         when(registrationService.findByEmail("test@example.com")).thenReturn(Optional.of(userInfo));
 
         ResponseEntity<?> result = userServicesController.authenticate(authRequest);

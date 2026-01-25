@@ -19,9 +19,16 @@ import java.util.function.Function;
 public class JWTService {
 
     @Value("${jwt.secret}")
-    private String SECRET;
+    private String secret;
 
-	private static final long TOKEN_VALIDITY = 1000*60*30; // 30 minutes
+    @Value("${jwt.issuer}")
+    private String issuer;
+
+    @Value("${jwt.audience}")
+    private String audience;
+
+    @Value("${jwt.expiration-ms}")
+    private Long tokenValidity;
 
     public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -40,15 +47,16 @@ public class JWTService {
         return (tokenEmail.equals(databaseEmail) && !extractExpiration(jwtToken).before(new Date()));
     }
 
-    public String generateToken(String email){
-        Map<String,Object> claims = new HashMap<>();
+    public String generateToken(String email, Map<String,String> claims){
         log.debug("Generating JWT token for email={}", email);
-        return Jwts.builder().claims(claims).subject(email).issuedAt(new Date(System.currentTimeMillis())).expiration(new Date(System.currentTimeMillis()+TOKEN_VALIDITY))
+        return Jwts.builder().
+                issuer(issuer).setAudience(audience).subject(email).claims(claims).
+                issuedAt(new Date(System.currentTimeMillis())).expiration(new Date(System.currentTimeMillis()+tokenValidity))
                 .signWith(getSigningKey()).compact();
     }
 
     private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(SECRET);
+        byte[] keyBytes = Decoders.BASE64.decode(secret);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }

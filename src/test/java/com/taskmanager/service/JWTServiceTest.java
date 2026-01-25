@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 
 import java.util.Date;
+import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -24,7 +25,7 @@ class JWTServiceTest {
 
     @Test
     void generateTokenReturnsNonNullToken() {
-        String token = jwtService.generateToken("user@example.com");
+        String token = jwtService.generateToken("user@example.com", new HashMap<>());
 
         assertNotNull(token);
         assertFalse(token.isEmpty());
@@ -32,7 +33,7 @@ class JWTServiceTest {
 
     @Test
     void generateTokenReturnsValidJWTFormat() {
-        String token = jwtService.generateToken("user@example.com");
+        String token = jwtService.generateToken("user@example.com", new HashMap<>());
 
         String[] parts = token.split("\\.");
         assertEquals(3, parts.length);
@@ -43,7 +44,7 @@ class JWTServiceTest {
     @Test
     void extractEmailReturnsCorrectEmailFromToken() {
         String email = "user@example.com";
-        String token = jwtService.generateToken(email);
+        String token = jwtService.generateToken(email, new HashMap<>());
 
         String extractedEmail = jwtService.extractEmail(token);
 
@@ -54,8 +55,8 @@ class JWTServiceTest {
     void extractEmailReturnsCorrectEmailForDifferentEmails() {
         String email1 = "admin@example.com";
         String email2 = "user@test.com";
-        String token1 = jwtService.generateToken(email1);
-        String token2 = jwtService.generateToken(email2);
+        String token1 = jwtService.generateToken(email1, new HashMap<>());
+        String token2 = jwtService.generateToken(email2, new HashMap<>());
 
         assertEquals(email1, jwtService.extractEmail(token1));
         assertEquals(email2, jwtService.extractEmail(token2));
@@ -64,7 +65,7 @@ class JWTServiceTest {
     @Test
     void extractEmailHandlesEmailWithSpecialCharacters() {
         String email = "user+test@example.co.uk";
-        String token = jwtService.generateToken(email);
+        String token = jwtService.generateToken(email, new HashMap<>());
 
         String extractedEmail = jwtService.extractEmail(token);
 
@@ -73,7 +74,7 @@ class JWTServiceTest {
 
     @Test
     void extractExpirationReturnsDateInFuture() {
-        String token = jwtService.generateToken("user@example.com");
+        String token = jwtService.generateToken("user@example.com", new HashMap<>());
 
         Date expiration = jwtService.extractExpiration(token);
 
@@ -86,7 +87,7 @@ class JWTServiceTest {
     @Test
     void extractClaimExtractsSubjectClaim() {
         String email = "user@example.com";
-        String token = jwtService.generateToken(email);
+        String token = jwtService.generateToken(email, new HashMap<>());
 
         String subject = jwtService.extractClaim(token, Claims::getSubject);
 
@@ -95,7 +96,7 @@ class JWTServiceTest {
 
     @Test
     void extractClaimExtractsIssuedAtClaim() {
-        String token = jwtService.generateToken("user@example.com");
+        String token = jwtService.generateToken("user@example.com", new HashMap<>());
 
         Date issuedAt = jwtService.extractClaim(token, Claims::getIssuedAt);
 
@@ -106,7 +107,7 @@ class JWTServiceTest {
     @Test
     void validateTokenReturnsTrueForValidToken() {
         String email = "user@example.com";
-        String token = jwtService.generateToken(email);
+        String token = jwtService.generateToken(email, new HashMap<>());
         String tokenEmail = jwtService.extractEmail(token);
 
         Boolean isValid = jwtService.validateToken(tokenEmail, email, token);
@@ -117,7 +118,7 @@ class JWTServiceTest {
     @Test
     void validateTokenReturnsFalseWhenEmailsDoNotMatch() {
         String email = "user@example.com";
-        String token = jwtService.generateToken(email);
+        String token = jwtService.generateToken(email, new HashMap<>());
         String tokenEmail = jwtService.extractEmail(token);
 
         Boolean isValid = jwtService.validateToken(tokenEmail, "different@example.com", token);
@@ -128,7 +129,7 @@ class JWTServiceTest {
     @Test
     void validateTokenReturnsFalseWhenTokenEmailDoesNotMatchDatabaseEmail() {
         String email = "user@example.com";
-        String token = jwtService.generateToken(email);
+        String token = jwtService.generateToken(email, new HashMap<>());
 
         Boolean isValid = jwtService.validateToken("wrong@example.com", email, token);
 
@@ -138,7 +139,7 @@ class JWTServiceTest {
     @Test
     void validateTokenReturnsTrueWhenBothEmailsMatchAndTokenNotExpired() {
         String email = "admin@example.com";
-        String token = jwtService.generateToken(email);
+        String token = jwtService.generateToken(email, new HashMap<>());
 
         Boolean isValid = jwtService.validateToken(email, email, token);
 
@@ -175,7 +176,7 @@ class JWTServiceTest {
 
     @Test
     void generateTokenHandlesNullEmail() {
-        String token = jwtService.generateToken(null);
+        String token = jwtService.generateToken(null, new HashMap<>());
 
         assertNotNull(token);
         assertNull(jwtService.extractEmail(token));
@@ -194,7 +195,7 @@ class JWTServiceTest {
     @Test
     void validateTokenHandlesCaseSensitiveEmails() {
         String email = "User@Example.com";
-        String token = jwtService.generateToken(email);
+        String token = jwtService.generateToken(email, new HashMap<>());
         String tokenEmail = jwtService.extractEmail(token);
 
         Boolean isValid = jwtService.validateToken(tokenEmail, "user@example.com", token);
@@ -205,7 +206,7 @@ class JWTServiceTest {
     @Test
     void generateTokenCreatesTokenWithCorrectStructure() {
         String email = "test@example.com";
-        String token = jwtService.generateToken(email);
+        String token = jwtService.generateToken(email, new HashMap<>());
 
         assertNotNull(token);
         assertTrue(token.matches("^[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$"));
