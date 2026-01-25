@@ -46,7 +46,7 @@ public class TaskManagementController{
 			log.warn("Title already exists: {}", saveRequest.getTitle());
 			throw new BadRequest("Title already exists");
 		}
-		int taskId = taskService.saveTask(saveRequest);
+		Long taskId = taskService.saveTask(saveRequest);
 		if (taskId == 0) {
 			log.error("Failed to saveTask {}", saveRequest.getTitle());
 			throw new InternalServerError("Failed to saveTask " + saveRequest.getTitle());

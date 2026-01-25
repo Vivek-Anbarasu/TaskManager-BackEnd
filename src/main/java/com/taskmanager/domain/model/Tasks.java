@@ -14,7 +14,7 @@ public class Tasks implements Serializable {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
-	private Integer taskId;
+	private Long taskId;
 
 	private String title;
 	private String description;

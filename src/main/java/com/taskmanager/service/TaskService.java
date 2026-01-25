@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface TaskService 
 {
-	int saveTask(SaveTaskRequest saveRequest);
+	Long saveTask(SaveTaskRequest saveRequest);
 
 	GetTaskResponse getTask(Integer TaskId);
 

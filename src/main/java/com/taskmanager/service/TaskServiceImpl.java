@@ -22,7 +22,7 @@ public class TaskServiceImpl implements TaskService {
 
 	@Override
 	@Transactional
-	public int saveTask(SaveTaskRequest saveRequest) {
+	public Long saveTask(SaveTaskRequest saveRequest) {
 		Tasks tasks = Tasks.builder().title(saveRequest.getTitle()).
         description(saveRequest.getDescription()).status(saveRequest.getStatus()).build();
 		Tasks savedTasks = taskRepository.save(tasks);
