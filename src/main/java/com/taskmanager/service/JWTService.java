@@ -43,16 +43,23 @@ public class JWTService {
     }
 
     public Boolean validateToken(String tokenEmail, String databaseEmail, String jwtToken) {
-        // Verify the algorithm in the token header is HS512
-        String algorithm = Jwts.parser()
+        // Parse the token once to get both header and claims
+        var parsedToken = Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
-                .parseSignedClaims(jwtToken)
-                .getHeader()
-                .getAlgorithm();
+                .parseSignedClaims(jwtToken);
 
+        // Verify the algorithm in the token header is HS512
+        String algorithm = parsedToken.getHeader().getAlgorithm();
         if (algorithm == null || !algorithm.equals("HS512")) {
             log.warn("Invalid algorithm in JWT token. Expected HS512, but got: {}", algorithm);
+            return false;
+        }
+
+        // Verify the issuer matches the expected issuer
+        String tokenIssuer = parsedToken.getPayload().getIssuer();
+        if (tokenIssuer == null || !tokenIssuer.equals(issuer)) {
+            log.warn("Invalid issuer in JWT token. Expected: {}, but got: {}", issuer, tokenIssuer);
             return false;
         }
 
