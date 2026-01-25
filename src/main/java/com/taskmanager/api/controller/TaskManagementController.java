@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,6 +29,7 @@ public class TaskManagementController{
 
 	private final TaskService taskService;
 
+	@PreAuthorize("hasAnyRole('USER', 'ADMIN')")
 	@GetMapping(path = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<GetTaskResponse> getTask(@NotNull(message="TaskId is mandatory") @PathVariable("id") Integer id) {
         log.info("Get request received for taskId = {}", id);
@@ -39,6 +41,7 @@ public class TaskManagementController{
 		return new ResponseEntity<>(getResponse, HttpStatus.OK);
 	}
 
+	@PreAuthorize("hasRole('ADMIN')")
 	@PostMapping(path = "/", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> saveTask(@Valid @RequestBody SaveTaskRequest saveRequest) {
 		Tasks tasks = taskService.findByTitle(saveRequest.getTitle());
@@ -55,6 +58,7 @@ public class TaskManagementController{
 		return new ResponseEntity<>(String.valueOf(taskId), HttpStatus.CREATED);
 	}
 
+	@PreAuthorize("hasRole('ADMIN')")
 	@PutMapping(path = "/", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> updateTask(@Valid @RequestBody UpdateTaskRequest updateRequest) {
 		log.info("Update request received for taskId = {}", updateRequest.getId());
@@ -72,6 +76,7 @@ public class TaskManagementController{
 		throw new NotFound("No records found for taskId = " + updateRequest.getId());
 	}
 
+	@PreAuthorize("hasRole('ADMIN')")
 	@DeleteMapping("/{id}")
 	public ResponseEntity<Void> deleteTask(@NotNull(message="TaskId is mandatory") @PathVariable("id") Integer id) {
         log.info("Delete request received for taskId = {}", id);
@@ -84,6 +89,7 @@ public class TaskManagementController{
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 
+	@PreAuthorize("hasAnyRole('USER', 'ADMIN')")
 	@GetMapping(path = "/" , produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<List<GetTaskResponse>> getAllTasks() {
         log.info("Get all tasks request received");

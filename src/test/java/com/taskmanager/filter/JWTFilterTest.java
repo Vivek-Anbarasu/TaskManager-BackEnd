@@ -63,6 +63,7 @@ class JWTFilterTest {
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(jwtService.extractEmail(token)).thenReturn(email);
+        when(jwtService.extractRole(token)).thenReturn("USER");
         when(userDetailsService.loadUserByUsername(email)).thenReturn(userDetails);
         when(jwtService.validateToken(email, email, token)).thenReturn(true);
 
@@ -170,6 +171,7 @@ class JWTFilterTest {
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(jwtService.extractEmail(token)).thenReturn(email);
+        when(jwtService.extractRole(token)).thenReturn("USER");
 
         SecurityContextHolder.setContext(securityContext);
         when(securityContext.getAuthentication()).thenReturn(null);
@@ -201,6 +203,7 @@ class JWTFilterTest {
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(jwtService.extractEmail(token)).thenReturn(email);
+        when(jwtService.extractRole(token)).thenReturn("ADMIN");
         when(userDetailsService.loadUserByUsername(email)).thenReturn(userDetails);
         when(jwtService.validateToken(email, email, token)).thenReturn(true);
 
@@ -263,6 +266,7 @@ class JWTFilterTest {
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(jwtService.extractEmail(token)).thenReturn(email);
+        when(jwtService.extractRole(token)).thenReturn("USER");
         when(userDetailsService.loadUserByUsername(email)).thenReturn(userDetails);
         when(jwtService.validateToken(email, email, token)).thenReturn(true);
 
@@ -297,6 +301,7 @@ class JWTFilterTest {
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(jwtService.extractEmail(token)).thenReturn(email);
+        when(jwtService.extractRole(token)).thenReturn("USER");
         when(userDetailsService.loadUserByUsername(email)).thenReturn(userDetails);
         when(jwtService.validateToken(email, email, token)).thenReturn(true);
 

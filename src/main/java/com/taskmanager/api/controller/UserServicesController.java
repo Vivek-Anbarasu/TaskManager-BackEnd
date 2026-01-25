@@ -15,7 +15,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collection;
@@ -56,27 +55,13 @@ public class UserServicesController {
         return registrationService.addUser(userInfo);
     }
 
-    public static Set<String> getCurrentUserRoles() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication != null && authentication.isAuthenticated()) {
-            Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
-            Set<String> roles = authorities.stream()
-                    .map(GrantedAuthority::getAuthority)
-                    .collect(Collectors.toSet());
-            return roles;
-        } else {
-            return Set.of();
-        }
-    }
-
     @PostMapping(path = "/authenticate", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> authenticate(@RequestBody AuthenticationRequest authRequest) {
 
         log.info("Authenticate request received for {}", authRequest.email());
          Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authRequest.email(), authRequest.password()));
-         SecurityContextHolder.getContext().setAuthentication(authentication);
-         Set<String> roles = getCurrentUserRoles();
+         // If authentication is successful, use roles from database, prepare claims and generate JWT token
+         Set<String> roles = authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toSet());
          Map<String,String> claims = Map.of("role", String.join(",", roles));
          String jwtToken = jwtService.generateToken(authRequest.email(),claims);
          if(jwtToken != null){
@@ -86,7 +71,6 @@ public class UserServicesController {
          }else{
             throw new com.taskmanager.exception.Unauthorized("Email/Password is not valid");
          }
-
     }
     
 //    @PostMapping(path = "/refresh", produces = MediaType.APPLICATION_JSON_VALUE)

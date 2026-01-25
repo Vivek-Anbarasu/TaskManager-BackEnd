@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -72,6 +73,15 @@ public class TaskManagementExceptionHandler {
         log.warn("Authentication failed: {}", ex.getMessage());
         return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }
+
+	    @ExceptionHandler(AuthorizationDeniedException.class)
+	    @ResponseStatus(HttpStatus.FORBIDDEN)
+	    @RequestMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+	    public ResponseEntity<ErrorResponse> handleAuthorizationDenied(AuthorizationDeniedException ex) {
+	        ErrorResponse response = new ErrorResponse(403, "Access Denied");
+	        log.warn("Authorization denied: {}", ex.getMessage());
+	        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+	    }
 
 	    @ExceptionHandler(Exception.class)
 	    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)

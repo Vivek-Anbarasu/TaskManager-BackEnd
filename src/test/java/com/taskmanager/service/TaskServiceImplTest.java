@@ -258,7 +258,7 @@ class TaskServiceImplTest {
         List<GetTaskResponse> result = taskService.getAllTasks();
 
         assertEquals(1, result.size());
-        GetTaskResponse response = result.get(0);
+        GetTaskResponse response = result.getFirst();
         assertEquals(10, response.getId());
         assertEquals("Complete Task", response.getTitle());
         assertEquals("Full Description", response.getDescription());
