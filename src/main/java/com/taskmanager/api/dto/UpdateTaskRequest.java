@@ -9,7 +9,7 @@ import lombok.Setter;
 public class UpdateTaskRequest {
 
   @NotNull(message = "TaskId is mandatory")
-  private Integer id;
+  private Long id;
 
   @NotNull(message = "Title is mandatory")
   @NotEmpty(message = "Title is mandatory")	

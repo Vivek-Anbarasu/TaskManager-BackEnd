@@ -29,35 +29,35 @@ class TaskServiceImplTest {
     private TaskServiceImpl taskService;
 
     @Test
-    void saveTaskReturnsTaskIdWhenTaskIsSavedSuccessfully() throws Exception {
+    void saveTaskReturnsTaskIdWhenTaskIsSavedSuccessfully() {
         SaveTaskRequest request = new SaveTaskRequest();
         request.setTitle("New Task");
         request.setDescription("Task Description");
         request.setStatus("To Do");
 
         Tasks savedTask = new Tasks();
-        savedTask.setTaskId(1);
+        savedTask.setTaskId(1L);
         savedTask.setTitle("New Task");
         savedTask.setDescription("Task Description");
         savedTask.setStatus("To Do");
 
         when(taskRepository.save(any(Tasks.class))).thenReturn(savedTask);
 
-        int result = taskService.saveTask(request);
+        Long result = taskService.saveTask(request);
 
-        assertEquals(1, result);
+        assertEquals(1L, result);
         verify(taskRepository, times(1)).save(any(Tasks.class));
     }
 
     @Test
-    void saveTaskSetsAllFieldsCorrectly() throws Exception {
+    void saveTaskSetsAllFieldsCorrectly() {
         SaveTaskRequest request = new SaveTaskRequest();
         request.setTitle("Test Title");
         request.setDescription("Test Description");
         request.setStatus("In Progress");
 
         Tasks savedTask = new Tasks();
-        savedTask.setTaskId(5);
+        savedTask.setTaskId(5L);
 
         when(taskRepository.save(any(Tasks.class))).thenAnswer(invocation -> {
             Tasks task = invocation.getArgument(0);
@@ -67,15 +67,15 @@ class TaskServiceImplTest {
             return savedTask;
         });
 
-        int result = taskService.saveTask(request);
+        Long result = taskService.saveTask(request);
 
-        assertEquals(5, result);
+        assertEquals(5L, result);
     }
 
     @Test
-    void getTaskReturnsTaskResponseWhenTaskExists() throws Exception {
+    void getTaskReturnsTaskResponseWhenTaskExists() {
         Tasks task = new Tasks();
-        task.setTaskId(1);
+        task.setTaskId(1L);
         task.setTitle("Existing Task");
         task.setDescription("Existing Description");
         task.setStatus("Done");
@@ -93,7 +93,7 @@ class TaskServiceImplTest {
     }
 
     @Test
-    void getTaskReturnsNullWhenTaskDoesNotExist() throws Exception {
+    void getTaskReturnsNullWhenTaskDoesNotExist() {
         when(taskRepository.findById(anyLong())).thenReturn(Optional.empty());
 
         GetTaskResponse result = taskService.getTask(99);
@@ -103,7 +103,7 @@ class TaskServiceImplTest {
     }
 
     @Test
-    void getTaskConvertsIntegerIdToLong() throws Exception {
+    void getTaskConvertsIntegerIdToLong() {
         when(taskRepository.findById(100L)).thenReturn(Optional.empty());
 
         taskService.getTask(100);
@@ -112,7 +112,7 @@ class TaskServiceImplTest {
     }
 
     @Test
-    void deleteTaskReturnsTrueWhenTaskIsDeleted() throws Exception {
+    void deleteTaskReturnsTrueWhenTaskIsDeleted() {
         doNothing().when(taskRepository).deleteById(anyLong());
 
         boolean result = taskService.deleteTask(1);
@@ -122,7 +122,7 @@ class TaskServiceImplTest {
     }
 
     @Test
-    void deleteTaskConvertsIntegerIdToLong() throws Exception {
+    void deleteTaskConvertsIntegerIdToLong() {
         doNothing().when(taskRepository).deleteById(50L);
 
         taskService.deleteTask(50);
@@ -131,15 +131,15 @@ class TaskServiceImplTest {
     }
 
     @Test
-    void updateTaskReturnsTrueWhenTaskExistsAndIsUpdated() throws Exception {
+    void updateTaskReturnsTrueWhenTaskExistsAndIsUpdated() {
         UpdateTaskRequest request = new UpdateTaskRequest();
-        request.setId(1);
+        request.setId(1L);
         request.setTitle("Updated Title");
         request.setDescription("Updated Description");
         request.setStatus("In Progress");
 
         Tasks existingTask = new Tasks();
-        existingTask.setTaskId(1);
+        existingTask.setTaskId(1L);
         existingTask.setTitle("Old Title");
         existingTask.setDescription("Old Description");
         existingTask.setStatus("To Do");
@@ -158,9 +158,9 @@ class TaskServiceImplTest {
     }
 
     @Test
-    void updateTaskReturnsFalseWhenTaskDoesNotExist() throws Exception {
+    void updateTaskReturnsFalseWhenTaskDoesNotExist() {
         UpdateTaskRequest request = new UpdateTaskRequest();
-        request.setId(999);
+        request.setId(999L);
         request.setTitle("Updated Title");
         request.setDescription("Updated Description");
         request.setStatus("Done");
@@ -175,15 +175,15 @@ class TaskServiceImplTest {
     }
 
     @Test
-    void updateTaskUpdatesOnlyProvidedFields() throws Exception {
+    void updateTaskUpdatesOnlyProvidedFields() {
         UpdateTaskRequest request = new UpdateTaskRequest();
-        request.setId(2);
+        request.setId(2L);
         request.setTitle("New Title");
         request.setDescription("New Description");
         request.setStatus("Done");
 
         Tasks existingTask = new Tasks();
-        existingTask.setTaskId(2);
+        existingTask.setTaskId(2L);
 
         when(taskRepository.findById(2L)).thenReturn(Optional.of(existingTask));
         when(taskRepository.save(any(Tasks.class))).thenAnswer(invocation -> {
@@ -200,21 +200,21 @@ class TaskServiceImplTest {
     }
 
     @Test
-    void getAllTasksReturnsListOfTaskResponsesWhenTasksExist() throws Exception {
+    void getAllTasksReturnsListOfTaskResponsesWhenTasksExist() {
         Tasks task1 = new Tasks();
-        task1.setTaskId(1);
+        task1.setTaskId(1L);
         task1.setTitle("Task 1");
         task1.setDescription("Description 1");
         task1.setStatus("To Do");
 
         Tasks task2 = new Tasks();
-        task2.setTaskId(2);
+        task2.setTaskId(2L);
         task2.setTitle("Task 2");
         task2.setDescription("Description 2");
         task2.setStatus("In Progress");
 
         Tasks task3 = new Tasks();
-        task3.setTaskId(3);
+        task3.setTaskId(3L);
         task3.setTitle("Task 3");
         task3.setDescription("Description 3");
         task3.setStatus("Done");
@@ -235,7 +235,7 @@ class TaskServiceImplTest {
     }
 
     @Test
-    void getAllTasksReturnsEmptyListWhenNoTasksExist() throws Exception {
+    void getAllTasksReturnsEmptyListWhenNoTasksExist() {
         when(taskRepository.findAll()).thenReturn(Collections.emptyList());
 
         List<GetTaskResponse> result = taskService.getAllTasks();
@@ -246,9 +246,9 @@ class TaskServiceImplTest {
     }
 
     @Test
-    void getAllTasksMapsAllFieldsCorrectly() throws Exception {
+    void getAllTasksMapsAllFieldsCorrectly() {
         Tasks task = new Tasks();
-        task.setTaskId(10);
+        task.setTaskId(10L);
         task.setTitle("Complete Task");
         task.setDescription("Full Description");
         task.setStatus("Done");
@@ -266,9 +266,9 @@ class TaskServiceImplTest {
     }
 
     @Test
-    void findByTitleReturnsTaskWhenTitleExists() throws Exception {
+    void findByTitleReturnsTaskWhenTitleExists() {
         Tasks task = new Tasks();
-        task.setTaskId(1);
+        task.setTaskId(1L);
         task.setTitle("Specific Title");
         task.setDescription("Description");
         task.setStatus("To Do");
@@ -278,13 +278,13 @@ class TaskServiceImplTest {
         Tasks result = taskService.findByTitle("Specific Title");
 
         assertNotNull(result);
-        assertEquals(1, result.getTaskId());
+        assertEquals(1L, result.getTaskId());
         assertEquals("Specific Title", result.getTitle());
         verify(taskRepository, times(1)).findByTitle("Specific Title");
     }
 
     @Test
-    void findByTitleReturnsNullWhenTitleDoesNotExist() throws Exception {
+    void findByTitleReturnsNullWhenTitleDoesNotExist() {
         when(taskRepository.findByTitle("Nonexistent Title")).thenReturn(Optional.empty());
 
         Tasks result = taskService.findByTitle("Nonexistent Title");
@@ -294,7 +294,7 @@ class TaskServiceImplTest {
     }
 
     @Test
-    void findByTitleHandlesNullTitle() throws Exception {
+    void findByTitleHandlesNullTitle() {
         when(taskRepository.findByTitle(null)).thenReturn(Optional.empty());
 
         Tasks result = taskService.findByTitle(null);
@@ -304,7 +304,7 @@ class TaskServiceImplTest {
     }
 
     @Test
-    void findByTitleHandlesEmptyString() throws Exception {
+    void findByTitleHandlesEmptyString() {
         when(taskRepository.findByTitle("")).thenReturn(Optional.empty());
 
         Tasks result = taskService.findByTitle("");

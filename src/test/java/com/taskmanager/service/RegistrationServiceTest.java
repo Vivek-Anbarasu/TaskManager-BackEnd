@@ -33,7 +33,7 @@ class RegistrationServiceTest {
     @Test
     void findByEmailReturnsUserWhenEmailExists() {
         UserInfo userInfo = new UserInfo();
-        userInfo.setId(1);
+        userInfo.setId(1L);
         userInfo.setEmail("user@example.com");
         userInfo.setPassword("password123");
 
@@ -231,7 +231,7 @@ class RegistrationServiceTest {
     @Test
     void findByEmailReturnsSameUserInfoFromRepository() {
         UserInfo expectedUser = new UserInfo();
-        expectedUser.setId(5);
+        expectedUser.setId(5L);
         expectedUser.setEmail("specific@example.com");
         expectedUser.setFirstname("Test");
 

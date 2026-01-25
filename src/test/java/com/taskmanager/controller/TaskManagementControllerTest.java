@@ -37,7 +37,7 @@ class TaskManagementControllerTest {
     @Test
     void getTaskReturnsTaskWhenTaskExists() {
         GetTaskResponse response = GetTaskResponse.builder()
-                .id(1)
+                .id(1L)
                 .title("Test Task")
                 .description("Test Description")
                 .status("To Do")
@@ -69,7 +69,7 @@ class TaskManagementControllerTest {
         request.setStatus("To Do");
 
         when(taskService.findByTitle("New Task")).thenReturn(null);
-        when(taskService.saveTask(any(SaveTaskRequest.class))).thenReturn(1);
+        when(taskService.saveTask(any(SaveTaskRequest.class))).thenReturn(1L);
 
         ResponseEntity<String> result = taskManagementController.saveTask(request);
 
@@ -89,7 +89,7 @@ class TaskManagementControllerTest {
         request.setStatus("To Do");
 
         when(taskService.findByTitle("New Task")).thenReturn(null);
-        when(taskService.saveTask(any(SaveTaskRequest.class))).thenReturn(0);
+        when(taskService.saveTask(any(SaveTaskRequest.class))).thenReturn(0L);
 
         assertThrows(InternalServerError.class, () -> taskManagementController.saveTask(request));
     }
@@ -109,7 +109,7 @@ class TaskManagementControllerTest {
     @Test
     void updateTaskReturnsOkWhenTaskIsUpdatedSuccessfully() {
         UpdateTaskRequest request = new UpdateTaskRequest();
-        request.setId(1);
+        request.setId(1L);
         request.setTitle("Updated Task");
         request.setDescription("Updated Description");
         request.setStatus("In Progress");
@@ -128,13 +128,13 @@ class TaskManagementControllerTest {
     @Test
     void updateTaskReturnsOkWhenTitleBelongsToSameTask() {
         UpdateTaskRequest request = new UpdateTaskRequest();
-        request.setId(1);
+        request.setId(1L);
         request.setTitle("Existing Task");
         request.setDescription("Updated Description");
         request.setStatus("In Progress");
 
         Tasks existingTask = new Tasks();
-        existingTask.setTaskId(1);
+        existingTask.setTaskId(1L);
         existingTask.setTitle("Existing Task");
 
         when(taskService.findByTitle("Existing Task")).thenReturn(existingTask);
@@ -153,7 +153,7 @@ class TaskManagementControllerTest {
     @Test
     void updateTaskThrowsInternalServerErrorWhenServiceThrowsException() {
         com.taskmanager.api.dto.UpdateTaskRequest request = new UpdateTaskRequest();
-        request.setId(1);
+        request.setId(1L);
         request.setTitle("Task");
         request.setDescription("Description");
         request.setStatus("To Do");
@@ -165,12 +165,6 @@ class TaskManagementControllerTest {
 
     @Test
     void deleteTaskReturnsNoContentWhenTaskIsDeletedSuccessfully() {
-        GetTaskResponse response = GetTaskResponse.builder()
-                .id(1)
-                .title("Task to Delete")
-                .description("Description")
-                .status("To Do")
-                .build();
 
         when(taskService.deleteTask(1)).thenReturn(true);
 
@@ -184,12 +178,6 @@ class TaskManagementControllerTest {
 
     @Test
     void deleteTaskThrowsInternalServerErrorWhenDeletionFails() {
-        GetTaskResponse response = GetTaskResponse.builder()
-                .id(1)
-                .title("Task")
-                .description("Description")
-                .status("To Do")
-                .build();
 
         when(taskService.deleteTask(1)).thenReturn(false);
 
@@ -206,14 +194,14 @@ class TaskManagementControllerTest {
     @Test
     void getAllTasksReturnsListWhenTasksExist() {
         GetTaskResponse task1 = GetTaskResponse.builder()
-                .id(1)
+                .id(1L)
                 .title("Task 1")
                 .description("Description 1")
                 .status("To Do")
                 .build();
 
         GetTaskResponse task2 = GetTaskResponse.builder()
-                .id(2)
+                .id(2L)
                 .title("Task 2")
                 .description("Description 2")
                 .status("In Progress")
@@ -235,7 +223,7 @@ class TaskManagementControllerTest {
     @Test
     void getAllTasksReturnsSingleTaskWhenOnlyOneTaskExists() {
         GetTaskResponse task = GetTaskResponse.builder()
-                .id(1)
+                .id(1L)
                 .title("Single Task")
                 .description("Description")
                 .status("Done")
@@ -270,7 +258,7 @@ class TaskManagementControllerTest {
         request.setStatus("To Do");
 
         Tasks existing = new Tasks();
-        existing.setTaskId(2);
+        existing.setTaskId(2L);
         existing.setTitle("Existing");
 
         when(taskService.findByTitle("Existing")).thenReturn(existing);
@@ -283,13 +271,13 @@ class TaskManagementControllerTest {
     @Test
     void updateTaskThrowsBadRequestWhenTitleBelongsToOtherTask() {
         UpdateTaskRequest request = new UpdateTaskRequest();
-        request.setId(1);
+        request.setId(1L);
         request.setTitle("Existing");
         request.setDescription("Desc");
         request.setStatus("To Do");
 
         Tasks existing = new Tasks();
-        existing.setTaskId(2); // different id
+        existing.setTaskId(2L); // different id
         existing.setTitle("Existing");
 
         when(taskService.findByTitle("Existing")).thenReturn(existing);
@@ -301,7 +289,7 @@ class TaskManagementControllerTest {
     @Test
     void updateTaskThrowsNotFoundWhenUpdateReturnsFalse() {
         UpdateTaskRequest request = new UpdateTaskRequest();
-        request.setId(1);
+        request.setId(1L);
         request.setTitle("New");
         request.setDescription("Desc");
         request.setStatus("To Do");

@@ -28,7 +28,7 @@ class UserDetailsServiceImplTest {
     @Test
     void loadUserByUsernameReturnsUserDetailsWhenEmailExists() {
         UserInfo userInfo = new UserInfo();
-        userInfo.setId(1);
+        userInfo.setId(1L);
         userInfo.setEmail("user@example.com");
         userInfo.setPassword("password123");
         userInfo.setRole("ROLE_USER");
@@ -62,7 +62,7 @@ class UserDetailsServiceImplTest {
     @Test
     void loadUserByUsernameReturnsUserDetailsWithMultipleRoles() {
         UserInfo userInfo = new UserInfo();
-        userInfo.setId(2);
+        userInfo.setId(2L);
         userInfo.setEmail("admin@example.com");
         userInfo.setPassword("adminpass");
         userInfo.setRole("ROLE_USER,ROLE_ADMIN");
