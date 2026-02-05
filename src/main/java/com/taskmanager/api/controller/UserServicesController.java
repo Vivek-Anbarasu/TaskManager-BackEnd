@@ -1,7 +1,6 @@
 package com.taskmanager.api.controller;
 
 import com.taskmanager.api.dto.AuthenticationRequest;
-import com.taskmanager.api.dto.RefreshTokenRequest;
 import com.taskmanager.api.dto.UserRegistrationRequest;
 import com.taskmanager.domain.model.UserInfo;
 import com.taskmanager.service.JWTService;
@@ -75,14 +74,21 @@ public class UserServicesController {
     }
 
     @PostMapping(path = "/refresh-token", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest refreshRequest) {
+    public ResponseEntity<?> refreshToken(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
 
         log.info("Refresh token request received");
 
         try {
+            // Extract token from Authorization header (remove "Bearer " prefix)
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                throw new com.taskmanager.exception.Unauthorized("Invalid Authorization header format. Expected: Bearer <token>");
+            }
+
+            String token = authorizationHeader.substring(7); // Remove "Bearer " prefix
+
             // Extract email and role from the existing token
-            String email = jwtService.extractEmail(refreshRequest.token());
-            String role = jwtService.extractRole(refreshRequest.token());
+            String email = jwtService.extractEmail(token);
+            String role = jwtService.extractRole(token);
 
             // Verify the user still exists in the database
             Optional<UserInfo> optUserInfo = registrationService.findByEmail(email);
@@ -92,7 +98,7 @@ public class UserServicesController {
             }
 
             // Validate the token
-            if (!jwtService.validateToken(email, optUserInfo.get().getEmail(), refreshRequest.token())) {
+            if (!jwtService.validateToken(email, optUserInfo.get().getEmail(), token)) {
                 throw new com.taskmanager.exception.Unauthorized("Invalid or expired token");
             }
 
