@@ -8,6 +8,7 @@ import com.taskmanager.exception.InternalServerError;
 import com.taskmanager.exception.NotFound;
 import com.taskmanager.service.TaskService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ import java.util.List;
 @RequestMapping("/task")
 @Slf4j
 @RequiredArgsConstructor
+@Tag(name = "Task Services")
 public class TaskManagementController{
 
 	private final TaskService taskService;

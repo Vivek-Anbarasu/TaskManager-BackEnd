@@ -29,6 +29,8 @@ springdoc:
   swagger-ui:
     enabled: true
     path: /swagger-ui.html
+    operationsSorter: method
+    display-request-duration: true
 
 # Logging Configuration
 # Available log levels (from most to least verbose):

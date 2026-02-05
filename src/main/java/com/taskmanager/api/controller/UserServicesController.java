@@ -5,6 +5,7 @@ import com.taskmanager.api.dto.UserRegistrationRequest;
 import com.taskmanager.domain.model.UserInfo;
 import com.taskmanager.service.JWTService;
 import com.taskmanager.service.RegistrationService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/user")
 @Slf4j
 @RequiredArgsConstructor
+@Tag(name = "User Services")
 public class UserServicesController {
 
     private final RegistrationService registrationService;

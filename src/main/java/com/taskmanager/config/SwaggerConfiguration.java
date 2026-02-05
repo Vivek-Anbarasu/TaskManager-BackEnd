@@ -1,16 +1,16 @@
 package com.taskmanager.config;
 
-import com.taskmanager.exception.BadRequest;
-import com.taskmanager.exception.InternalServerError;
-import com.taskmanager.exception.NotFound;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.core.converter.ModelConverters;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -18,9 +18,6 @@ import org.springdoc.core.customizers.OperationCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.HandlerMethod;
-
-import java.util.Arrays;
-import java.util.List;
 
 @Configuration
 @Slf4j
@@ -50,19 +47,30 @@ public class SwaggerConfiguration {
     }
 
     private Operation customize(Operation operation, HandlerMethod handlerMethod) {
-        List<Class<?>> exceptions = Arrays.asList(handlerMethod.getMethod().getExceptionTypes());
-        ApiResponses apiResponse = 	operation.getResponses();
+        ApiResponses apiResponses = operation.getResponses();
 
-        if(exceptions.contains(InternalServerError.class)) {
-        apiResponse.addApiResponse("500", internalServerApiResponse);
+        // Add common error responses to all operations
+        // 400 - Bad Request (for validation errors, duplicate entries, etc.)
+        if (!apiResponses.containsKey("400")) {
+            apiResponses.addApiResponse("400", badRequestApiResponse);
         }
 
-        if(exceptions.contains(NotFound.class)) {
-        apiResponse.addApiResponse("404", notFoundServerApiResponse);
+        // 401 - Unauthorized (for authentication failures)
+        if (!apiResponses.containsKey("401")) {
+            Schema<?> refSchema = new Schema<>().$ref("#/components/schemas/ErrorResponse");
+            ApiResponse unauthorizedResponse = new ApiResponse().description("Unauthorized - Invalid or missing authentication token")
+                    .content(new Content().addMediaType("application/json", new MediaType().schema(refSchema)));
+            apiResponses.addApiResponse("401", unauthorizedResponse);
         }
 
-        if(exceptions.contains(BadRequest.class)) {
-        apiResponse.addApiResponse("400", badRequestApiResponse);
+        // 404 - Not Found (for resources that don't exist)
+        if (!apiResponses.containsKey("404")) {
+            apiResponses.addApiResponse("404", notFoundServerApiResponse);
+        }
+
+        // 500 - Internal Server Error
+        if (!apiResponses.containsKey("500")) {
+            apiResponses.addApiResponse("500", internalServerApiResponse);
         }
 
         return operation;
@@ -74,6 +82,14 @@ public class SwaggerConfiguration {
         OpenAPI openAPI = new OpenAPI();
         Components components = new Components();
 
+        // Add Bearer Token security scheme
+        components.addSecuritySchemes("Bearer Authentication",
+            new SecurityScheme()
+                .type(SecurityScheme.Type.HTTP)
+                .scheme("bearer")
+                .bearerFormat("JWT")
+                .description("Enter JWT token obtained from /user/authenticate endpoint"));
+
         // Use ModelConverters to read the ErrorResponse POJO and add its schema
         @SuppressWarnings("unchecked")
         Map<String, Schema<?>> schemas = (Map<String, Schema<?>>) (Map) ModelConverters.getInstance().read(com.taskmanager.exception.ErrorResponse.class);
@@ -82,6 +98,16 @@ public class SwaggerConfiguration {
         }
 
         openAPI.setComponents(components);
+
+        // Add API information
+        openAPI.info(new Info()
+            .title("Task Management Application API")
+            .description("RESTful API for managing tasks with user authentication using JWT tokens")
+            .version("1.0.0")
+            .contact(new Contact()
+                .name("TaskManager Team")
+                .email("taskmanager@example.com")));
+
         return openAPI;
     }
 }
