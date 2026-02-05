@@ -3,6 +3,7 @@ package com.taskmanager.controller;
 import com.taskmanager.api.controller.UserServicesController;
 import com.taskmanager.api.dto.*;
 import com.taskmanager.domain.model.UserInfo;
+import com.taskmanager.mapper.UserMapper;
 import com.taskmanager.service.JWTService;
 import com.taskmanager.service.RegistrationService;
 import org.junit.jupiter.api.Test;
@@ -43,20 +44,27 @@ class UserServicesControllerTest {
     @Mock
     private Authentication authentication;
 
+    @Mock
+    private UserMapper userMapper;
+
     @InjectMocks
     private UserServicesController userServicesController;
 
     @Test
     void addNewUserSuccessfullyRegistersNewUser() {
-        UserRegistrationRequest userReq = new UserRegistrationRequest("newuser@example.com", "password123", null, null, "John", "Doe");
+        UserRegistrationRequest userReq = new UserRegistrationRequest("newuser@example.com", "password123", "USA", "ROLE_USER", "John", "Doe");
+        UserInfo userInfo = new UserInfo();
+        userInfo.setEmail("newuser@example.com");
 
         when(registrationService.findByEmail("newuser@example.com")).thenReturn(Optional.empty());
+        when(userMapper.toUserInfo(userReq)).thenReturn(userInfo);
         when(registrationService.addUser(any(UserInfo.class))).thenReturn("User registered successfully");
 
         String result = userServicesController.addNewUser(userReq);
 
         assertEquals("User registered successfully", result);
         verify(registrationService, times(1)).findByEmail("newuser@example.com");
+        verify(userMapper, times(1)).toUserInfo(userReq);
         verify(registrationService, times(1)).addUser(any(UserInfo.class));
     }
 
@@ -75,16 +83,20 @@ class UserServicesControllerTest {
     }
 
     @Test
-    void addNewUserHandlesNullEmail() {
-        UserRegistrationRequest userReq = new UserRegistrationRequest(null, "password123", null, null, null, null);
+    void addNewUserWithValidEmailAndRequiredFields() {
+        UserRegistrationRequest userReq = new UserRegistrationRequest("valid@example.com", "password123", "USA", "ROLE_USER", "First", "Last");
+        UserInfo userInfo = new UserInfo();
+        userInfo.setEmail("valid@example.com");
 
-        when(registrationService.findByEmail(null)).thenReturn(Optional.empty());
+        when(registrationService.findByEmail("valid@example.com")).thenReturn(Optional.empty());
+        when(userMapper.toUserInfo(userReq)).thenReturn(userInfo);
         when(registrationService.addUser(any(UserInfo.class))).thenReturn("User registered successfully");
 
         String result = userServicesController.addNewUser(userReq);
 
         assertEquals("User registered successfully", result);
-        verify(registrationService, times(1)).findByEmail(null);
+        verify(registrationService, times(1)).findByEmail("valid@example.com");
+        verify(userMapper, times(1)).toUserInfo(userReq);
     }
 
     @Test
@@ -205,13 +217,17 @@ class UserServicesControllerTest {
     @Test
     void addNewUserWithCompleteUserInformation() {
         UserRegistrationRequest userReq = new UserRegistrationRequest("complete@example.com", "securePassword", "USA", "USER", "Complete", "User");
+        UserInfo userInfo = new UserInfo();
+        userInfo.setEmail("complete@example.com");
 
         when(registrationService.findByEmail("complete@example.com")).thenReturn(Optional.empty());
+        when(userMapper.toUserInfo(userReq)).thenReturn(userInfo);
         when(registrationService.addUser(any(UserInfo.class))).thenReturn("Registration successful");
 
         String result = userServicesController.addNewUser(userReq);
 
         assertEquals("Registration successful", result);
+        verify(userMapper, times(1)).toUserInfo(userReq);
         verify(registrationService, times(1)).addUser(any(UserInfo.class));
     }
 

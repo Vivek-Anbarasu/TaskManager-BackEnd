@@ -10,7 +10,6 @@ import com.taskmanager.service.TaskService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -33,7 +32,7 @@ public class TaskManagementController{
 
 	@PreAuthorize("hasAnyRole('USER', 'ADMIN')")
 	@GetMapping(path = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<GetTaskResponse> getTask(@NotNull(message="TaskId is mandatory") @PathVariable("id") Integer id) {
+	public ResponseEntity<GetTaskResponse> getTask(@PathVariable("id") Integer id) {
         log.info("Get request received for taskId = {}", id);
 		GetTaskResponse getResponse = taskService.getTask(id);
 		if (getResponse == null) {
@@ -80,7 +79,7 @@ public class TaskManagementController{
 
 	@PreAuthorize("hasRole('ADMIN')")
 	@DeleteMapping("/{id}")
-	public ResponseEntity<Void> deleteTask(@NotNull(message="TaskId is mandatory") @PathVariable("id") Integer id) {
+	public ResponseEntity<Void> deleteTask(@PathVariable("id") Integer id) {
         log.info("Delete request received for taskId = {}", id);
         boolean response = taskService.deleteTask(id);
         if (!response) {

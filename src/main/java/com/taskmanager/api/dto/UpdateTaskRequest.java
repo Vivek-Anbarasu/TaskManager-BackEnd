@@ -1,5 +1,6 @@
 package com.taskmanager.api.dto;
 
+import com.taskmanager.validation.StatusValidator;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -21,7 +22,7 @@ public class UpdateTaskRequest {
 
   @NotNull(message = "Status is mandatory")
   @NotEmpty(message = "Status is mandatory")
- // @StatusValidator(message = "Status must be either To Do or In Progress or Done")
+  @StatusValidator
   private String status;
 
 }

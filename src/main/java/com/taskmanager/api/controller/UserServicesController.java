@@ -7,6 +7,7 @@ import com.taskmanager.mapper.UserMapper;
 import com.taskmanager.service.JWTService;
 import com.taskmanager.service.RegistrationService;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -37,7 +38,7 @@ public class UserServicesController {
     private final UserMapper userMapper;
 
     @PostMapping(path = "/new-registration", produces = MediaType.APPLICATION_JSON_VALUE)
-    public String addNewUser(@RequestBody UserRegistrationRequest userReq) {
+    public String addNewUser(@Valid @RequestBody UserRegistrationRequest userReq) {
 
         log.info("Registering email: {}", userReq.getEmail());
 
@@ -53,7 +54,7 @@ public class UserServicesController {
     }
 
     @PostMapping(path = "/authenticate", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> authenticate(@RequestBody AuthenticationRequest authRequest) {
+    public ResponseEntity<?> authenticate(@Valid @RequestBody AuthenticationRequest authRequest) {
 
         log.info("Authenticate request received for {}", authRequest.email());
          Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authRequest.email(), authRequest.password()));
