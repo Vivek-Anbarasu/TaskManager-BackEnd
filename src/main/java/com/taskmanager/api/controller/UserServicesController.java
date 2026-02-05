@@ -3,6 +3,7 @@ package com.taskmanager.api.controller;
 import com.taskmanager.api.dto.AuthenticationRequest;
 import com.taskmanager.api.dto.UserRegistrationRequest;
 import com.taskmanager.domain.model.UserInfo;
+import com.taskmanager.mapper.UserMapper;
 import com.taskmanager.service.JWTService;
 import com.taskmanager.service.RegistrationService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,7 +19,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -34,6 +34,7 @@ public class UserServicesController {
     private final RegistrationService registrationService;
     private final JWTService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final UserMapper userMapper;
 
     @PostMapping(path = "/new-registration", produces = MediaType.APPLICATION_JSON_VALUE)
     public String addNewUser(@RequestBody UserRegistrationRequest userReq) {
@@ -46,13 +47,7 @@ public class UserServicesController {
             throw new com.taskmanager.exception.BadRequest("Email already registered, please use a different email");
         }
 
-        UserInfo userInfo = new UserInfo();
-        userInfo.setEmail(userReq.getEmail());
-        userInfo.setPassword(userReq.getPassword());
-        userInfo.setCountry(userReq.getCountry());
-        userInfo.setRole(userReq.getRole());
-        userInfo.setFirstname(userReq.getFirstname());
-        userInfo.setLastname(userReq.getLastname());
+        UserInfo userInfo = userMapper.toUserInfo(userReq);
 
         return registrationService.addUser(userInfo);
     }
