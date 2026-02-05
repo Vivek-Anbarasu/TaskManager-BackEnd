@@ -1,6 +1,7 @@
 package com.taskmanager.api.controller;
 
 import com.taskmanager.api.dto.AuthenticationRequest;
+import com.taskmanager.api.dto.RefreshTokenRequest;
 import com.taskmanager.api.dto.UserRegistrationRequest;
 import com.taskmanager.domain.model.UserInfo;
 import com.taskmanager.service.JWTService;
@@ -72,14 +73,47 @@ public class UserServicesController {
             throw new com.taskmanager.exception.Unauthorized("Email/Password is not valid");
          }
     }
-    
-//    @PostMapping(path = "/refresh", produces = MediaType.APPLICATION_JSON_VALUE)
-//    public AuthResponse refreshToken(@RequestHeader("Token") String jwtToken) {
-//    	String subject = jwtService.extractEmail(jwtToken);
-//    	String creds[] = subject.split(" ");
-//    	AuthRequest authRequest = new AuthRequest();
-//    	authRequest.setUsername(creds[0]);
-//    	authRequest.setPassword(creds[1]);
-//    	return authenticateAndGetToken(authRequest);
-//    }
+
+    @PostMapping(path = "/refresh-token", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest refreshRequest) {
+
+        log.info("Refresh token request received");
+
+        try {
+            // Extract email and role from the existing token
+            String email = jwtService.extractEmail(refreshRequest.token());
+            String role = jwtService.extractRole(refreshRequest.token());
+
+            // Verify the user still exists in the database
+            Optional<UserInfo> optUserInfo = registrationService.findByEmail(email);
+
+            if (optUserInfo.isEmpty()) {
+                throw new com.taskmanager.exception.Unauthorized("User not found");
+            }
+
+            // Validate the token
+            if (!jwtService.validateToken(email, optUserInfo.get().getEmail(), refreshRequest.token())) {
+                throw new com.taskmanager.exception.Unauthorized("Invalid or expired token");
+            }
+
+            // Generate new token with the same claims
+            Map<String, String> claims = Map.of("role", role);
+            String newJwtToken = jwtService.generateToken(email, claims);
+
+            if (newJwtToken != null) {
+                HttpHeaders headers = new HttpHeaders();
+                headers.setBearerAuth(newJwtToken);
+                log.info("Token refreshed successfully for email: {}", email);
+                return new ResponseEntity<>(email, headers, HttpStatus.OK);
+            } else {
+                throw new com.taskmanager.exception.Unauthorized("Failed to generate new token");
+            }
+
+        } catch (Exception e) {
+            log.error("Error refreshing token: {}", e.getMessage());
+            throw new com.taskmanager.exception.Unauthorized("Invalid token: " + e.getMessage());
+        }
+    }
+
+
 }
