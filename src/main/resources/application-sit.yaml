@@ -1,0 +1,25 @@
+# SIT Environment Configuration
+spring:
+  datasource:
+    url: jdbc:postgresql://sit-db-server:5432/taskdb
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    show-sql: false
+
+# Logging Configuration for SIT
+logging:
+  level:
+    root: INFO
+    com.taskmanager: INFO
+
+# Swagger disabled in SIT
+springdoc:
+  swagger-ui:
+    enabled: false
+
+# CORS configuration for SIT
+cors:
+  allowed-origins: https://sit.taskmanager-app.com
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH

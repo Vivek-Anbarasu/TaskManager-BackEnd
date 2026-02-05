@@ -1,0 +1,25 @@
+# UAT Environment Configuration
+spring:
+  datasource:
+    url: jdbc:postgresql://uat-db-server:5432/taskdb
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    show-sql: false
+
+# Logging Configuration for UAT
+logging:
+  level:
+    root: INFO
+    com.taskmanager: INFO
+
+# Swagger disabled in UAT
+springdoc:
+  swagger-ui:
+    enabled: false
+
+# CORS configuration for UAT
+cors:
+  allowed-origins: https://uat.taskmanager-app.com
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH

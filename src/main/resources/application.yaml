@@ -13,7 +13,7 @@ spring:
     password: vivek
 
   jpa:
-    show-sql: true
+    show-sql: true  # Enabled for local development, disabled in SIT/UAT/PROD profiles
     hibernate:
       ddl-auto: none
       naming:
@@ -23,6 +23,13 @@ spring:
          current_session_context_class: org.springframework.orm.hibernate5.SpringSessionContext
          dialect: org.hibernate.dialect.PostgreSQLDialect
 
+# Swagger Configuration - ENABLED for local development
+# Disabled in SIT, UAT, and PROD profiles for security
+springdoc:
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+
 # Logging Configuration
 # Available log levels (from most to least verbose):
 # TRACE - Very detailed information, typically only useful for diagnosing problems
@@ -31,13 +38,14 @@ spring:
 # WARN  - Warning messages about potentially harmful situations
 # ERROR - Error events that might still allow the application to continue
 # OFF   - Disable logging for a specific package
-
+#
+# Examples for different environments:
 # Development: DEBUG or TRACE for detailed logs
 # Production:  INFO or WARN for minimal but useful logs
 logging:
   level:
     root: INFO                                              # Default level for all packages
-    com.taskmanager: INFO                                   # Application package (use DEBUG for development)
+    com.taskmanager: DEBUG                                  # Application package - DEBUG for development
 
 management:
   endpoints:
