@@ -214,4 +214,143 @@ class UserServicesControllerTest {
         assertEquals("Registration successful", result);
         verify(registrationService, times(1)).addUser(any(UserInfo.class));
     }
+
+    @Test
+    void refreshTokenSuccessfullyGeneratesNewToken() {
+        String oldToken = "eyJhbGciOiJIUzUxMiJ9.oldtoken";
+        String authHeader = "Bearer " + oldToken;
+
+        UserInfo userInfo = new UserInfo();
+        userInfo.setEmail("user@example.com");
+
+        when(jwtService.extractEmail(oldToken)).thenReturn("user@example.com");
+        when(jwtService.extractRole(oldToken)).thenReturn("ROLE_USER");
+        when(registrationService.findByEmail("user@example.com")).thenReturn(Optional.of(userInfo));
+        when(jwtService.validateToken("user@example.com", "user@example.com", oldToken)).thenReturn(true);
+        when(jwtService.generateToken(eq("user@example.com"), any())).thenReturn("new-jwt-token");
+
+        ResponseEntity<?> result = userServicesController.refreshToken(authHeader);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        assertEquals("user@example.com", result.getBody());
+        assertEquals("Bearer new-jwt-token", result.getHeaders().getFirst(HttpHeaders.AUTHORIZATION));
+        verify(jwtService, times(1)).extractEmail(oldToken);
+        verify(jwtService, times(1)).extractRole(oldToken);
+        verify(jwtService, times(1)).validateToken("user@example.com", "user@example.com", oldToken);
+        verify(jwtService, times(1)).generateToken(eq("user@example.com"), eq(java.util.Map.of("role", "ROLE_USER")));
+    }
+
+    @Test
+    void refreshTokenThrowsUnauthorizedWhenHeaderIsMissing() {
+        assertThrows(com.taskmanager.exception.Unauthorized.class,
+                () -> userServicesController.refreshToken(null));
+    }
+
+    @Test
+    void refreshTokenThrowsUnauthorizedWhenHeaderDoesNotStartWithBearer() {
+        String invalidHeader = "Basic abc123";
+
+        assertThrows(com.taskmanager.exception.Unauthorized.class,
+                () -> userServicesController.refreshToken(invalidHeader));
+    }
+
+    @Test
+    void refreshTokenThrowsUnauthorizedWhenUserNotFound() {
+        String oldToken = "eyJhbGciOiJIUzUxMiJ9.oldtoken";
+        String authHeader = "Bearer " + oldToken;
+
+        when(jwtService.extractEmail(oldToken)).thenReturn("nonexistent@example.com");
+        when(jwtService.extractRole(oldToken)).thenReturn("ROLE_USER");
+        when(registrationService.findByEmail("nonexistent@example.com")).thenReturn(Optional.empty());
+
+        assertThrows(com.taskmanager.exception.Unauthorized.class,
+                () -> userServicesController.refreshToken(authHeader));
+
+        verify(registrationService, times(1)).findByEmail("nonexistent@example.com");
+        verify(jwtService, never()).validateToken(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void refreshTokenThrowsUnauthorizedWhenTokenValidationFails() {
+        String oldToken = "eyJhbGciOiJIUzUxMiJ9.expiredtoken";
+        String authHeader = "Bearer " + oldToken;
+
+        UserInfo userInfo = new UserInfo();
+        userInfo.setEmail("user@example.com");
+
+        when(jwtService.extractEmail(oldToken)).thenReturn("user@example.com");
+        when(jwtService.extractRole(oldToken)).thenReturn("ROLE_USER");
+        when(registrationService.findByEmail("user@example.com")).thenReturn(Optional.of(userInfo));
+        when(jwtService.validateToken("user@example.com", "user@example.com", oldToken)).thenReturn(false);
+
+        assertThrows(com.taskmanager.exception.Unauthorized.class,
+                () -> userServicesController.refreshToken(authHeader));
+
+        verify(jwtService, times(1)).validateToken("user@example.com", "user@example.com", oldToken);
+        verify(jwtService, never()).generateToken(anyString(), any());
+    }
+
+    @Test
+    void refreshTokenThrowsUnauthorizedWhenNewTokenGenerationFails() {
+        String oldToken = "eyJhbGciOiJIUzUxMiJ9.oldtoken";
+        String authHeader = "Bearer " + oldToken;
+
+        UserInfo userInfo = new UserInfo();
+        userInfo.setEmail("user@example.com");
+
+        when(jwtService.extractEmail(oldToken)).thenReturn("user@example.com");
+        when(jwtService.extractRole(oldToken)).thenReturn("ROLE_USER");
+        when(registrationService.findByEmail("user@example.com")).thenReturn(Optional.of(userInfo));
+        when(jwtService.validateToken("user@example.com", "user@example.com", oldToken)).thenReturn(true);
+        when(jwtService.generateToken(anyString(), any())).thenReturn(null);
+
+        assertThrows(com.taskmanager.exception.Unauthorized.class,
+                () -> userServicesController.refreshToken(authHeader));
+    }
+
+    @Test
+    void refreshTokenPreservesUserRoleInNewToken() {
+        String oldToken = "eyJhbGciOiJIUzUxMiJ9.admintoken";
+        String authHeader = "Bearer " + oldToken;
+
+        UserInfo userInfo = new UserInfo();
+        userInfo.setEmail("admin@example.com");
+
+        when(jwtService.extractEmail(oldToken)).thenReturn("admin@example.com");
+        when(jwtService.extractRole(oldToken)).thenReturn("ROLE_ADMIN");
+        when(registrationService.findByEmail("admin@example.com")).thenReturn(Optional.of(userInfo));
+        when(jwtService.validateToken("admin@example.com", "admin@example.com", oldToken)).thenReturn(true);
+        when(jwtService.generateToken(anyString(), any())).thenReturn("new-admin-token");
+
+        ResponseEntity<?> result = userServicesController.refreshToken(authHeader);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        verify(jwtService).generateToken(eq("admin@example.com"), eq(java.util.Map.of("role", "ROLE_ADMIN")));
+    }
+
+    @Test
+    void refreshTokenHandlesMalformedToken() {
+        String authHeader = "Bearer malformed.token";
+
+        when(jwtService.extractEmail("malformed.token")).thenThrow(new RuntimeException("Invalid token format"));
+
+        assertThrows(com.taskmanager.exception.Unauthorized.class,
+                () -> userServicesController.refreshToken(authHeader));
+    }
+
+    @Test
+    void refreshTokenHandlesEmptyAuthorizationHeader() {
+        String authHeader = "";
+
+        assertThrows(com.taskmanager.exception.Unauthorized.class,
+                () -> userServicesController.refreshToken(authHeader));
+    }
+
+    @Test
+    void refreshTokenHandlesBearerWithoutToken() {
+        String authHeader = "Bearer ";
+
+        assertThrows(com.taskmanager.exception.Unauthorized.class,
+                () -> userServicesController.refreshToken(authHeader));
+    }
 }
