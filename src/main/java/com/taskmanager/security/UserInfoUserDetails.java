@@ -1,4 +1,4 @@
-package com.taskmanager.config;
+package com.taskmanager.security;
 
 import com.taskmanager.domain.model.UserInfo;
 import org.springframework.security.core.GrantedAuthority;
@@ -14,7 +14,7 @@ public class UserInfoUserDetails implements UserDetails {
 
 
     private static final long serialVersionUID = -8160791985280638889L;
-	
+
     private String name;
     private String password;
     private List<GrantedAuthority> authorities;

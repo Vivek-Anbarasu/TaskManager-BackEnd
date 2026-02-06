@@ -23,23 +23,19 @@ import org.springframework.web.method.HandlerMethod;
 @Slf4j
 public class SwaggerConfiguration {
 
-    public static final ApiResponse internalServerApiResponse;
-    public static final ApiResponse badRequestApiResponse;
-    public static final ApiResponse notFoundServerApiResponse;
+    private static final Schema<?> ERROR_RESPONSE_SCHEMA = new Schema<>().$ref("#/components/schemas/ErrorResponse");
 
-    static {
-        // Register ApiResponse objects that reference the ErrorResponse schema from components
-        Schema<?> refSchema = new Schema<>().$ref("#/components/schemas/ErrorResponse");
+    public static final ApiResponse internalServerApiResponse = new ApiResponse()
+            .description("Internal Server Error")
+            .content(new Content().addMediaType("application/json", new MediaType().schema(ERROR_RESPONSE_SCHEMA)));
 
-        internalServerApiResponse = new ApiResponse().description("Internal Server Error")
-                .content(new Content().addMediaType("application/json", new MediaType().schema(refSchema)));
+    public static final ApiResponse badRequestApiResponse = new ApiResponse()
+            .description("Bad request")
+            .content(new Content().addMediaType("application/json", new MediaType().schema(ERROR_RESPONSE_SCHEMA)));
 
-        badRequestApiResponse = new ApiResponse().description("Bad request")
-                .content(new Content().addMediaType("application/json", new MediaType().schema(refSchema)));
-
-        notFoundServerApiResponse = new ApiResponse().description("Not Found")
-                .content(new Content().addMediaType("application/json", new MediaType().schema(refSchema)));
-    }
+    public static final ApiResponse notFoundServerApiResponse = new ApiResponse()
+            .description("Not Found")
+            .content(new Content().addMediaType("application/json", new MediaType().schema(ERROR_RESPONSE_SCHEMA)));
 
     @Bean
     public OperationCustomizer customize() {

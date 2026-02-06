@@ -1,6 +1,6 @@
 package com.taskmanager.service;
 
-import com.taskmanager.config.UserInfoUserDetails;
+import com.taskmanager.security.UserInfoUserDetails;
 import com.taskmanager.domain.repository.UserInfoRepository;
 import com.taskmanager.domain.model.UserInfo;
 import lombok.RequiredArgsConstructor;
