@@ -1,0 +1,43 @@
+# Values for UAT environment
+replicaCount: 2
+
+image:
+  repository: docker.io/vivekanbarasu/repository-task-management-app
+  pullPolicy: Always
+  tag: "uat"
+
+springBoot:
+  profile: "uat"
+
+database:
+  host: "uat-postgres-service"
+  port: 5432
+  name: "taskdb"
+  username: "postgres"
+  existingSecret: "taskmanager-uat-db-secret"
+  secretKey: "DB_PASSWORD"
+
+jwt:
+  existingSecret: "taskmanager-uat-jwt-secret"
+  secretKey: "JWT_SECRET"
+
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: uat.taskmanager-app.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: taskmanager-uat-tls
+      hosts:
+        - uat.taskmanager-app.com
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi

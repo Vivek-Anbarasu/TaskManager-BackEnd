@@ -1,0 +1,43 @@
+# Values for SIT environment
+replicaCount: 1
+
+image:
+  repository: docker.io/vivekanbarasu/repository-task-management-app
+  pullPolicy: Always
+  tag: "sit"
+
+springBoot:
+  profile: "sit"
+
+database:
+  host: "sit-postgres-service"
+  port: 5432
+  name: "taskdb"
+  username: "postgres"
+  existingSecret: "taskmanager-sit-db-secret"
+  secretKey: "DB_PASSWORD"
+
+jwt:
+  existingSecret: "taskmanager-sit-jwt-secret"
+  secretKey: "JWT_SECRET"
+
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: sit.taskmanager-app.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: taskmanager-sit-tls
+      hosts:
+        - sit.taskmanager-app.com
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi

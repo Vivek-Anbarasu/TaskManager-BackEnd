@@ -1,0 +1,241 @@
+stages:
+  - build
+  - test
+  - package
+  - deploy
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  # Application variables
+  APP_NAME: tasks-management-application
+  DOCKER_IMAGE: docker.io/vivekanbarasu/repository-task-management-app
+  HELM_CHART_PATH: ./helm/taskmanager
+
+# Cache Maven dependencies
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - .m2/repository
+    - target/
+
+# Build Stage - Compile and package the application
+build:
+  stage: build
+  image: maven:3.9.6-eclipse-temurin-21
+  script:
+    - echo "Building application..."
+    - mvn clean package -DskipTests
+  artifacts:
+    paths:
+      - target/*.jar
+    expire_in: 1 hour
+  only:
+    - main
+    - develop
+    - /^release\/.*$/
+    - merge_requests
+
+# Test Stage - Run unit and integration tests
+test:unit:
+  stage: test
+  image: maven:3.9.6-eclipse-temurin-21
+  script:
+    - echo "Running unit tests..."
+    - mvn test
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports/
+      - target/site/jacoco/
+    reports:
+      junit:
+        - target/surefire-reports/TEST-*.xml
+  only:
+    - main
+    - develop
+    - /^release\/.*$/
+    - merge_requests
+
+# Code Quality Analysis
+code-quality:
+  stage: test
+  image: maven:3.9.6-eclipse-temurin-21
+  script:
+    - echo "Running code quality checks..."
+    - mvn verify -DskipTests
+  allow_failure: true
+  only:
+    - main
+    - develop
+    - merge_requests
+
+# Docker Build and Push
+docker:build:
+  stage: package
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  before_script:
+    - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin docker.io
+  script:
+    - export IMAGE_TAG=${CI_COMMIT_SHORT_SHA}
+    - |
+      if [ "$CI_COMMIT_BRANCH" == "main" ]; then
+        export IMAGE_TAG="latest"
+      elif [ "$CI_COMMIT_BRANCH" == "develop" ]; then
+        export IMAGE_TAG="sit"
+      fi
+    - echo "Building Docker image with tag: $IMAGE_TAG"
+    - docker build -t $DOCKER_IMAGE:$IMAGE_TAG .
+    - docker push $DOCKER_IMAGE:$IMAGE_TAG
+    - |
+      if [ "$CI_COMMIT_BRANCH" == "main" ]; then
+        docker tag $DOCKER_IMAGE:$IMAGE_TAG $DOCKER_IMAGE:${CI_COMMIT_SHORT_SHA}
+        docker push $DOCKER_IMAGE:${CI_COMMIT_SHORT_SHA}
+      fi
+  only:
+    - main
+    - develop
+    - /^release\/.*$/
+  dependencies:
+    - build
+
+# Helm Package
+helm:package:
+  stage: package
+  image: alpine/helm:3.12.0
+  script:
+    - echo "Packaging Helm chart..."
+    - helm lint $HELM_CHART_PATH
+    - helm package $HELM_CHART_PATH --destination ./helm-packages
+    - helm repo index ./helm-packages --url https://gitlab.com/yourorg/taskmanager/helm-packages
+  artifacts:
+    paths:
+      - helm-packages/
+    expire_in: 30 days
+  only:
+    - main
+    - develop
+    - tags
+
+# Deploy to SIT Environment
+deploy:sit:
+  stage: deploy
+  image: alpine/helm:3.12.0
+  environment:
+    name: sit
+    url: https://sit.taskmanager-app.com
+  before_script:
+    - apk add --no-cache curl
+    - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    - chmod +x kubectl && mv kubectl /usr/local/bin/
+    - mkdir -p ~/.kube
+    - echo "$KUBE_CONFIG_SIT" | base64 -d > ~/.kube/config
+  script:
+    - echo "Deploying to SIT environment..."
+    - |
+      helm upgrade --install taskmanager-sit $HELM_CHART_PATH \
+        --namespace taskmanager-sit \
+        --create-namespace \
+        --values $HELM_CHART_PATH/values-sit.yaml \
+        --set image.tag=sit \
+        --set database.existingSecret=taskmanager-sit-db-secret \
+        --set jwt.existingSecret=taskmanager-sit-jwt-secret \
+        --wait \
+        --timeout 5m
+    - kubectl get pods -n taskmanager-sit
+  only:
+    - develop
+  when: manual
+
+# Deploy to UAT Environment
+deploy:uat:
+  stage: deploy
+  image: alpine/helm:3.12.0
+  environment:
+    name: uat
+    url: https://uat.taskmanager-app.com
+  before_script:
+    - apk add --no-cache curl
+    - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    - chmod +x kubectl && mv kubectl /usr/local/bin/
+    - mkdir -p ~/.kube
+    - echo "$KUBE_CONFIG_UAT" | base64 -d > ~/.kube/config
+  script:
+    - echo "Deploying to UAT environment..."
+    - |
+      helm upgrade --install taskmanager-uat $HELM_CHART_PATH \
+        --namespace taskmanager-uat \
+        --create-namespace \
+        --values $HELM_CHART_PATH/values-uat.yaml \
+        --set image.tag=uat \
+        --set database.existingSecret=taskmanager-uat-db-secret \
+        --set jwt.existingSecret=taskmanager-uat-jwt-secret \
+        --wait \
+        --timeout 5m
+    - kubectl get pods -n taskmanager-uat
+  only:
+    - /^release\/.*$/
+  when: manual
+
+# Deploy to Production Environment
+deploy:prod:
+  stage: deploy
+  image: alpine/helm:3.12.0
+  environment:
+    name: production
+    url: https://taskmanager-app.com
+  before_script:
+    - apk add --no-cache curl
+    - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    - chmod +x kubectl && mv kubectl /usr/local/bin/
+    - mkdir -p ~/.kube
+    - echo "$KUBE_CONFIG_PROD" | base64 -d > ~/.kube/config
+  script:
+    - echo "Deploying to Production environment..."
+    - export PROD_VERSION=${CI_COMMIT_TAG:-latest}
+    - |
+      helm upgrade --install taskmanager-prod $HELM_CHART_PATH \
+        --namespace taskmanager-prod \
+        --create-namespace \
+        --values $HELM_CHART_PATH/values-prod.yaml \
+        --set image.tag=$PROD_VERSION \
+        --set database.existingSecret=taskmanager-prod-db-secret \
+        --set jwt.existingSecret=taskmanager-prod-jwt-secret \
+        --wait \
+        --timeout 10m
+    - kubectl get pods -n taskmanager-prod
+  only:
+    - tags
+    - main
+  when: manual
+
+# Rollback job (can be triggered manually)
+rollback:
+  stage: deploy
+  image: alpine/helm:3.12.0
+  script:
+    - mkdir -p ~/.kube
+    - |
+      if [ "$ENVIRONMENT" == "sit" ]; then
+        echo "$KUBE_CONFIG_SIT" | base64 -d > ~/.kube/config
+        NAMESPACE="taskmanager-sit"
+      elif [ "$ENVIRONMENT" == "uat" ]; then
+        echo "$KUBE_CONFIG_UAT" | base64 -d > ~/.kube/config
+        NAMESPACE="taskmanager-uat"
+      elif [ "$ENVIRONMENT" == "prod" ]; then
+        echo "$KUBE_CONFIG_PROD" | base64 -d > ~/.kube/config
+        NAMESPACE="taskmanager-prod"
+      else
+        echo "Invalid environment specified"
+        exit 1
+      fi
+    - echo "Rolling back taskmanager-$ENVIRONMENT..."
+    - helm rollback taskmanager-$ENVIRONMENT --namespace $NAMESPACE
+  when: manual
+  only:
+    - main
+    - develop
+    - /^release\/.*$/

@@ -1,0 +1,109 @@
+# Default values for taskmanager.
+# Declare variables to be passed into your templates.
+
+# Number of replicas for the application
+replicaCount: 1
+
+image:
+  repository: docker.io/vivekanbarasu/repository-task-management-app
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+imagePullSecrets: []
+
+# Spring Boot application configuration
+springBoot:
+  profile: "prod"  # Default to production profile
+
+# Database configuration
+database:
+  host: "postgres-service"  # Update with your database host
+  port: 5432
+  name: "taskdb"
+  username: "postgres"
+  # Database password should be provided via secret
+  existingSecret: ""  # Name of existing secret containing DB_PASSWORD
+  secretKey: "DB_PASSWORD"  # Key in the secret
+
+# JWT Configuration
+jwt:
+  # JWT secret should be provided via secret
+  existingSecret: ""  # Name of existing secret containing JWT_SECRET
+  secretKey: "JWT_SECRET"  # Key in the secret
+  expirationMs: 900000  # 15 minutes
+  issuer: "https://taskmanager-app.com/user/authenticate"
+  audience: "https://taskmanager-app.com"
+
+serviceAccount:
+  # The name of the service principle account to use.
+  name: "SVC_PROD_USER"
+
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: taskmanager.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Health checks configuration
+healthCheck:
+  readiness:
+    path: /actuator/health/readiness
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 3
+  liveness:
+    path: /actuator/health/liveness
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 3
+
+# Environment-specific overrides
+# These can be overridden using separate values files for each environment
+env:
+  # - name: CUSTOM_ENV_VAR
+  #   value: "custom-value"
+
+# Additional environment variables from secrets/configmaps
+envFrom: []
+  # - secretRef:
+  #     name: app-secrets
+  # - configMapRef:
+  #     name: app-config

@@ -1,0 +1,11 @@
+apiVersion: v2
+name: taskmanager
+description: A Helm chart for Task Management Application
+type: application
+# Chart version - increment when making changes to the chart
+version: 1.0.0
+# Application version
+appVersion: "1.0.0"
+maintainers:
+  - name: TaskManager Team
+    email: taskmanager@example.com
