@@ -1,4 +1,14 @@
 # PRODUCTION Environment Configuration
+# Rate Limiting Configuration for PRODUCTION
+rate:
+  limit:
+    capacity: 1000                         # Maximum tokens in bucket
+    refill:
+      tokens: 1                          # Number of tokens to refill
+      duration-seconds: 10               # Refill interval in seconds (1 token every 10 seconds = 6 tokens per minute)
+      greedy: true                       # Use greedy refill (continuous) instead of intervally
+    tokens-per-request: 1                # Number of tokens consumed per request
+
 spring:
   datasource:
     url: jdbc:postgresql://prod-db-server:5432/taskdb

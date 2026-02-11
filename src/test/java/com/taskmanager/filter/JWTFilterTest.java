@@ -2,6 +2,7 @@ package com.taskmanager.filter;
 
 import com.taskmanager.security.jwt.JWTFilter;
 import com.taskmanager.service.JWTService;
+import com.taskmanager.service.RateLimiterService;
 import com.taskmanager.service.UserDetailsServiceImpl;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -20,6 +21,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -35,6 +37,9 @@ class JWTFilterTest {
 
     @Mock
     private UserDetailsServiceImpl userDetailsService;
+
+    @Mock
+    private RateLimiterService rateLimiterService;
 
     @Mock
     private HttpServletRequest request;
@@ -63,6 +68,7 @@ class JWTFilterTest {
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(jwtService.extractEmail(token)).thenReturn(email);
+        when(rateLimiterService.tryConsume(email)).thenReturn(true); // Rate limit not exceeded
         when(jwtService.extractRole(token)).thenReturn("USER");
         when(userDetailsService.loadUserByUsername(email)).thenReturn(userDetails);
         when(jwtService.validateToken(email, email, token)).thenReturn(true);
@@ -119,6 +125,7 @@ class JWTFilterTest {
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(jwtService.extractEmail(token)).thenReturn(email);
+        when(rateLimiterService.tryConsume(email)).thenReturn(true); // Rate limit not exceeded
 
         SecurityContextHolder.setContext(securityContext);
         when(securityContext.getAuthentication()).thenReturn(existingAuth);
@@ -142,6 +149,7 @@ class JWTFilterTest {
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(jwtService.extractEmail(token)).thenReturn(email);
+        when(rateLimiterService.tryConsume(email)).thenReturn(true); // Rate limit not exceeded
         when(userDetailsService.loadUserByUsername(email)).thenReturn(userDetails);
         when(jwtService.validateToken(email, email, token)).thenReturn(false);
 
@@ -171,6 +179,7 @@ class JWTFilterTest {
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(jwtService.extractEmail(token)).thenReturn(email);
+        when(rateLimiterService.tryConsume(email)).thenReturn(true); // Rate limit not exceeded
         when(jwtService.extractRole(token)).thenReturn("USER");
 
         SecurityContextHolder.setContext(securityContext);
@@ -203,6 +212,7 @@ class JWTFilterTest {
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(jwtService.extractEmail(token)).thenReturn(email);
+        when(rateLimiterService.tryConsume(email)).thenReturn(true); // Rate limit not exceeded
         when(jwtService.extractRole(token)).thenReturn("ADMIN");
         when(userDetailsService.loadUserByUsername(email)).thenReturn(userDetails);
         when(jwtService.validateToken(email, email, token)).thenReturn(true);
@@ -236,6 +246,7 @@ class JWTFilterTest {
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(jwtService.extractEmail(token)).thenReturn(email);
+        when(rateLimiterService.tryConsume(email)).thenReturn(true); // Rate limit not exceeded
         when(userDetailsService.loadUserByUsername(email)).thenThrow(new RuntimeException("User not found"));
 
         SecurityContextHolder.setContext(securityContext);
@@ -266,6 +277,7 @@ class JWTFilterTest {
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(jwtService.extractEmail(token)).thenReturn(email);
+        when(rateLimiterService.tryConsume(email)).thenReturn(true); // Rate limit not exceeded
         when(jwtService.extractRole(token)).thenReturn("USER");
         when(userDetailsService.loadUserByUsername(email)).thenReturn(userDetails);
         when(jwtService.validateToken(email, email, token)).thenReturn(true);
@@ -301,6 +313,7 @@ class JWTFilterTest {
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(jwtService.extractEmail(token)).thenReturn(email);
+        when(rateLimiterService.tryConsume(email)).thenReturn(true); // Rate limit not exceeded
         when(jwtService.extractRole(token)).thenReturn("USER");
         when(userDetailsService.loadUserByUsername(email)).thenReturn(userDetails);
         when(jwtService.validateToken(email, email, token)).thenReturn(true);
@@ -313,5 +326,88 @@ class JWTFilterTest {
         verify(securityContext).setAuthentication(argThat(auth -> auth.getDetails() != null));
         verify(filterChain).doFilter(request, response);
     }
+
+    @Test
+    void returns429WhenRateLimitExceeded() throws ServletException, IOException {
+        String token = "valid.jwt.token";
+        String email = "user@example.com";
+        PrintWriter writer = mock(PrintWriter.class);
+
+        when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+        when(jwtService.extractEmail(token)).thenReturn(email);
+        when(rateLimiterService.tryConsume(email)).thenReturn(false); // Rate limit exceeded
+        when(response.getWriter()).thenReturn(writer);
+
+        jwtFilter.doFilterInternal(request, response, filterChain);
+
+        verify(response).setStatus(429);
+        verify(response).setContentType("application/json");
+        verify(writer).write("{\"error\":\"Too many requests. Please try again later.\"}");
+        verify(filterChain, never()).doFilter(request, response);
+        verify(userDetailsService, never()).loadUserByUsername(anyString());
+    }
+
+    @Test
+    void doesNotCheckRateLimitWhenNoEmailExtracted() throws ServletException, IOException {
+        String token = "invalid.token";
+
+        when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+        when(jwtService.extractEmail(token)).thenReturn(null);
+
+        jwtFilter.doFilterInternal(request, response, filterChain);
+
+        verify(rateLimiterService, never()).tryConsume(anyString());
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void checksRateLimitBeforeJWTValidation() throws ServletException, IOException {
+        String token = "valid.jwt.token";
+        String email = "user@example.com";
+        PrintWriter writer = mock(PrintWriter.class);
+
+        when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+        when(jwtService.extractEmail(token)).thenReturn(email);
+        when(rateLimiterService.tryConsume(email)).thenReturn(false); // Rate limit exceeded
+        when(response.getWriter()).thenReturn(writer);
+
+        jwtFilter.doFilterInternal(request, response, filterChain);
+
+        // Verify rate limit is checked before JWT validation
+        verify(rateLimiterService).tryConsume(email);
+        verify(jwtService, never()).validateToken(anyString(), anyString(), anyString());
+        verify(userDetailsService, never()).loadUserByUsername(anyString());
+        verify(response).setStatus(429);
+    }
+
+    @Test
+    void allowsRequestWhenRateLimitNotExceeded() throws ServletException, IOException {
+        String token = "valid.jwt.token";
+        String email = "user@example.com";
+        UserDetails userDetails = User.builder()
+                .username(email)
+                .password("password")
+                .authorities(Collections.emptyList())
+                .build();
+
+        when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+        when(jwtService.extractEmail(token)).thenReturn(email);
+        when(rateLimiterService.tryConsume(email)).thenReturn(true); // Rate limit NOT exceeded
+        when(jwtService.extractRole(token)).thenReturn("USER");
+        when(userDetailsService.loadUserByUsername(email)).thenReturn(userDetails);
+        when(jwtService.validateToken(email, email, token)).thenReturn(true);
+
+        SecurityContextHolder.setContext(securityContext);
+        when(securityContext.getAuthentication()).thenReturn(null);
+
+        jwtFilter.doFilterInternal(request, response, filterChain);
+
+        verify(rateLimiterService).tryConsume(email);
+        verify(jwtService).validateToken(email, email, token);
+        verify(userDetailsService).loadUserByUsername(email);
+        verify(filterChain).doFilter(request, response);
+        verify(response, never()).setStatus(429);
+    }
 }
+
 

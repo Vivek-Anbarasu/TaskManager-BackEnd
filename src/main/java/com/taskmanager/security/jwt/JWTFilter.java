@@ -1,6 +1,7 @@
 package com.taskmanager.security.jwt;
 
 import com.taskmanager.service.JWTService;
+import com.taskmanager.service.RateLimiterService;
 import com.taskmanager.service.UserDetailsServiceImpl;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -28,18 +29,31 @@ public class JWTFilter extends OncePerRequestFilter {
 
     private final JWTService jwtService;
     private final UserDetailsServiceImpl userDetailsService;
+    private final RateLimiterService rateLimiterService;
 
     @Override
     public void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String authHeader = request.getHeader("Authorization");
         String jwtToken = null;
         String email = null;
+
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             jwtToken = authHeader.substring(7);
             try {
                 email = jwtService.extractEmail(jwtToken);
             } catch (io.jsonwebtoken.JwtException e) {
                 log.warn("Failed to extract email from JWT token", e);
+            }
+        }
+
+        // Apply rate limiting before JWT validation
+        if (email != null) {
+            if (!rateLimiterService.tryConsume(email)) {
+                log.warn("Rate limit exceeded for user: {}", email);
+                response.setStatus(429); // HTTP 429 Too Many Requests
+                response.setContentType("application/json");
+                response.getWriter().write("{\"error\":\"Too many requests. Please try again later.\"}");
+                return;
             }
         }
 

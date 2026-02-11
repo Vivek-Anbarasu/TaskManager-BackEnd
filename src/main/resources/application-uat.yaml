@@ -1,4 +1,14 @@
 # UAT Environment Configuration
+# Rate Limiting Configuration for UAT
+rate:
+  limit:
+    capacity: 500                         # Maximum tokens in bucket
+    refill:
+      tokens: 1                          # Number of tokens to refill
+      duration-seconds: 10               # Refill interval in seconds (1 token every 10 seconds = 6 tokens per minute)
+      greedy: true                       # Use greedy refill (continuous) instead of intervally
+    tokens-per-request: 1                # Number of tokens consumed per request
+
 spring:
   datasource:
     url: jdbc:postgresql://uat-db-server:5432/taskdb

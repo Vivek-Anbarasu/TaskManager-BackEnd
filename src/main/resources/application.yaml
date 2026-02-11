@@ -4,6 +4,16 @@ jwt:
   expiration-ms: 900000 # 15 minutes
   audience: https://taskmanager-app.com
 
+# Rate Limiting Configuration
+rate:
+  limit:
+    capacity: 60                         # Maximum tokens in bucket
+    refill:
+      tokens: 60                         # Number of tokens to refill
+      duration-minutes: 1                # Refill interval
+      greedy: true                       # Use greedy refill (continuous) instead of intervally
+    tokens-per-request: 1                # Number of tokens consumed per request
+
 spring:
   application:
     name: taskmanager-app
