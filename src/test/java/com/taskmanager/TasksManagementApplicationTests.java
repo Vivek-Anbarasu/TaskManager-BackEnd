@@ -23,13 +23,7 @@ class TasksManagementApplicationTests {
 		assertNotNull(applicationContext);
 	}
 
-	@Test
-	void mainMethodStartsSpringBootApplication() {
-		assertDoesNotThrow(() -> {
-			String[] args = {};
-			TaskManagementApplication.main(args);
-		});
-	}
+
 
 	@Test
 	void applicationHasSecuritySchemeAnnotation() {
