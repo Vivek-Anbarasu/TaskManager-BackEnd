@@ -70,6 +70,19 @@ management:
           - "info"
           - "metrics"
           - "env"
+          - "prometheus"
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 50ms,100ms,200ms,500ms,1s
 
 # CORS configuration (externalized)
 cors:

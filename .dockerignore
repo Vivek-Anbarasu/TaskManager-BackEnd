@@ -1,12 +1,8 @@
-target/classes/
-target/generated-sources/
-target/generated-test-sources/
-target/maven-archiver/
-target/maven-status/
-target/surefire-reports/
-target/test-classes/
-target/jacoco.exec
-target/site/
+# Exclude everything from target except the built fat JAR
+target/
+!target/tasks-management-application-1.0-RELEASE.jar
+
+# IDE / build tool artifacts
 .mvn/wrapper/maven-wrapper.jar
 .git/
 .gitignore
@@ -17,4 +13,4 @@ target/site/
 .DS_Store
 .vscode/
 *.log
-
+helm/

@@ -1,22 +1,40 @@
-# Stage 1: Build the application - app.jar
-FROM maven:3.8.8-eclipse-temurin-21-alpine AS builder
+# ─────────────────────────────────────────────────────────────
+# Local Development Dockerfile
+# Uses the pre-built JAR from target/ to avoid needing JDK 25
+# inside Docker. Build the JAR first on the host:
+#   mvn clean package -DskipTests
+#
+# For CI/CD full-build, switch to the multi-stage section below.
+# ─────────────────────────────────────────────────────────────
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
-COPY pom.xml .
-COPY src ./src
-RUN mvn clean package -DskipTests
 
-# Stage 2: Extract the layers from the JAR built in the 'builder' stage
-FROM eclipse-temurin:21-jre-alpine AS runtime
-WORKDIR /app
-COPY --from=builder /app/target/*.jar app.jar
-RUN java -Djarmode=layertools -jar app.jar extract --destination .
+# Copy the pre-built fat JAR
+COPY target/tasks-management-application-1.0-RELEASE.jar app.jar
 
-# Stage 3: Copy dependencies as first step to leverage Docker cache
-COPY --from=runtime dependencies/ ./dependencies/
-COPY --from=runtime spring-boot-loader/ ./spring-boot-loader/
-COPY --from=runtime snapshot-dependencies/ ./snapshot-dependencies/
-COPY --from=runtime application/ ./application/
-
-# Stage 4:Define the entrypoint to run the application using the layered structure
-ENTRYPOINT ["java", "org.springframework.boot.loader.JarLauncher"]
 EXPOSE 8080
+
+# JVM tuning for containers (respects cgroup memory limits)
+ENTRYPOINT ["java", \
+  "-XX:+UseContainerSupport", \
+  "-XX:MaxRAMPercentage=75.0", \
+  "-jar", "app.jar"]
+
+
+# ─────────────────────────────────────────────────────────────
+# CI/CD multi-stage build (uncomment to use):
+# Requires eclipse-temurin:25-jdk-alpine + Maven on build host
+# ─────────────────────────────────────────────────────────────
+# FROM eclipse-temurin:25-jdk-alpine AS builder
+# RUN apk add --no-cache maven
+# WORKDIR /app
+# COPY pom.xml .
+# RUN mvn dependency:go-offline -q
+# COPY src ./src
+# RUN mvn clean package -DskipTests -q
+#
+# FROM eclipse-temurin:25-jre-alpine
+# WORKDIR /app
+# COPY --from=builder /app/target/*.jar app.jar
+# EXPOSE 8080
+# ENTRYPOINT ["java","-XX:+UseContainerSupport","-XX:MaxRAMPercentage=75.0","-jar","app.jar"]
