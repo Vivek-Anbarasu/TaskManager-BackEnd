@@ -1,8 +1,5 @@
 package com.taskmanager.service;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.security.SignatureException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,13 +12,17 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(classes = JWTService.class)
 @TestPropertySource(properties = {
-    "jwt.secret=UMGWByE8Ja/FyDFLqqOnKCN4GiFd+cm01UQnk+HTZjYAOUxTu7tEMyfXTBePrxQ4wNDfcmGymX0KgnS/9FGKvA=="
+    "jwt.secret=UMGWByE8Ja/FyDFLqqOnKCN4GiFd+cm01UQnk+HTZjYAOUxTu7tEMyfXTBePrxQ4wNDfcmGymX0KgnS/9FGKvA==",
+    "jwt.issuer=test-issuer",
+    "jwt.audience=test-audience",
+    "jwt.expiration-ms=3600000"
 })
 class JWTServiceTest {
 
     @Autowired
     private JWTService jwtService;
 
+    // ── generate ─────────────────────────────────────────────────────────────
 
     @Test
     void generateTokenReturnsNonNullToken() {
@@ -39,16 +40,30 @@ class JWTServiceTest {
         assertEquals(3, parts.length);
     }
 
+    @Test
+    void generateTokenCreatesTokenWithCorrectStructure() {
+        String token = jwtService.generateToken("test@example.com", new HashMap<>());
 
+        assertNotNull(token);
+        assertTrue(token.matches("^[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$"));
+    }
+
+    @Test
+    void generateTokenHandlesNullEmail() {
+        String token = jwtService.generateToken(null, new HashMap<>());
+
+        assertNotNull(token);
+        assertNull(jwtService.extractEmail(token));
+    }
+
+    // ── extractEmail ─────────────────────────────────────────────────────────
 
     @Test
     void extractEmailReturnsCorrectEmailFromToken() {
         String email = "user@example.com";
         String token = jwtService.generateToken(email, new HashMap<>());
 
-        String extractedEmail = jwtService.extractEmail(token);
-
-        assertEquals(email, extractedEmail);
+        assertEquals(email, jwtService.extractEmail(token));
     }
 
     @Test
@@ -67,88 +82,13 @@ class JWTServiceTest {
         String email = "user+test@example.co.uk";
         String token = jwtService.generateToken(email, new HashMap<>());
 
-        String extractedEmail = jwtService.extractEmail(token);
-
-        assertEquals(email, extractedEmail);
-    }
-
-    @Test
-    void extractExpirationReturnsDateInFuture() {
-        String token = jwtService.generateToken("user@example.com", new HashMap<>());
-
-        Date expiration = jwtService.extractExpiration(token);
-
-        assertNotNull(expiration);
-        assertTrue(expiration.after(new Date()));
-    }
-
-
-
-    @Test
-    void extractClaimExtractsSubjectClaim() {
-        String email = "user@example.com";
-        String token = jwtService.generateToken(email, new HashMap<>());
-
-        String subject = jwtService.extractClaim(token, Claims::getSubject);
-
-        assertEquals(email, subject);
-    }
-
-    @Test
-    void extractClaimExtractsIssuedAtClaim() {
-        String token = jwtService.generateToken("user@example.com", new HashMap<>());
-
-        Date issuedAt = jwtService.extractClaim(token, Claims::getIssuedAt);
-
-        assertNotNull(issuedAt);
-        assertTrue(issuedAt.before(new Date(System.currentTimeMillis() + 1000)));
-    }
-
-    @Test
-    void validateTokenReturnsTrueForValidToken() {
-        String email = "user@example.com";
-        String token = jwtService.generateToken(email, new HashMap<>());
-        String tokenEmail = jwtService.extractEmail(token);
-
-        Boolean isValid = jwtService.validateToken(tokenEmail, email, token);
-
-        assertTrue(isValid);
-    }
-
-    @Test
-    void validateTokenReturnsFalseWhenEmailsDoNotMatch() {
-        String email = "user@example.com";
-        String token = jwtService.generateToken(email, new HashMap<>());
-        String tokenEmail = jwtService.extractEmail(token);
-
-        Boolean isValid = jwtService.validateToken(tokenEmail, "different@example.com", token);
-
-        assertFalse(isValid);
-    }
-
-    @Test
-    void validateTokenReturnsFalseWhenTokenEmailDoesNotMatchDatabaseEmail() {
-        String email = "user@example.com";
-        String token = jwtService.generateToken(email, new HashMap<>());
-
-        Boolean isValid = jwtService.validateToken("wrong@example.com", email, token);
-
-        assertFalse(isValid);
-    }
-
-    @Test
-    void validateTokenReturnsTrueWhenBothEmailsMatchAndTokenNotExpired() {
-        String email = "admin@example.com";
-        String token = jwtService.generateToken(email, new HashMap<>());
-
-        Boolean isValid = jwtService.validateToken(email, email, token);
-
-        assertTrue(isValid);
+        assertEquals(email, jwtService.extractEmail(token));
     }
 
     @Test
     void extractEmailThrowsExceptionForInvalidToken() {
-        assertThrows(MalformedJwtException.class, () ->
+        // Nimbus wraps ParseException in RuntimeException for malformed tokens
+        assertThrows(RuntimeException.class, () ->
             jwtService.extractEmail("invalid.token.here")
         );
     }
@@ -167,49 +107,92 @@ class JWTServiceTest {
         );
     }
 
+    // ── extractExpiration ────────────────────────────────────────────────────
+
+    @Test
+    void extractExpirationReturnsDateInFuture() {
+        String token = jwtService.generateToken("user@example.com", new HashMap<>());
+
+        Date expiration = jwtService.extractExpiration(token);
+
+        assertNotNull(expiration);
+        assertTrue(expiration.after(new Date()));
+    }
+
+    @Test
+    void extractExpirationReturnsDateWithinConfiguredValidity() {
+        long before = System.currentTimeMillis();
+        String token = jwtService.generateToken("user@example.com", new HashMap<>());
+
+        Date expiration = jwtService.extractExpiration(token);
+
+        assertNotNull(expiration);
+        assertTrue(expiration.getTime() <= before + 3600000 + 1000); // within 1hr + 1s tolerance
+    }
+
     @Test
     void extractExpirationThrowsExceptionForInvalidToken() {
-        assertThrows(MalformedJwtException.class, () ->
+        // Nimbus wraps ParseException in RuntimeException for malformed tokens
+        assertThrows(RuntimeException.class, () ->
             jwtService.extractExpiration("invalid.token.here")
         );
     }
 
-    @Test
-    void generateTokenHandlesNullEmail() {
-        String token = jwtService.generateToken(null, new HashMap<>());
+    // ── validateToken ────────────────────────────────────────────────────────
 
-        assertNotNull(token);
-        assertNull(jwtService.extractEmail(token));
+    @Test
+    void validateTokenReturnsTrueForValidToken() {
+        String email = "user@example.com";
+        String token = jwtService.generateToken(email, new HashMap<>());
+
+        assertTrue(jwtService.validateToken(jwtService.extractEmail(token), email, token));
     }
 
+    @Test
+    void validateTokenReturnsTrueWhenBothEmailsMatchAndTokenNotExpired() {
+        String email = "admin@example.com";
+        String token = jwtService.generateToken(email, new HashMap<>());
+
+        assertTrue(jwtService.validateToken(email, email, token));
+    }
 
     @Test
-    void extractEmailThrowsExceptionForTokenWithWrongSignature() {
-        String token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+    void validateTokenReturnsFalseWhenEmailsDoNotMatch() {
+        String email = "user@example.com";
+        String token = jwtService.generateToken(email, new HashMap<>());
 
-        assertThrows(SignatureException.class, () ->
-            jwtService.extractEmail(token)
-        );
+        assertFalse(jwtService.validateToken(jwtService.extractEmail(token), "different@example.com", token));
+    }
+
+    @Test
+    void validateTokenReturnsFalseWhenTokenEmailDoesNotMatchDatabaseEmail() {
+        String email = "user@example.com";
+        String token = jwtService.generateToken(email, new HashMap<>());
+
+        assertFalse(jwtService.validateToken("wrong@example.com", email, token));
     }
 
     @Test
     void validateTokenHandlesCaseSensitiveEmails() {
         String email = "User@Example.com";
         String token = jwtService.generateToken(email, new HashMap<>());
-        String tokenEmail = jwtService.extractEmail(token);
 
-        Boolean isValid = jwtService.validateToken(tokenEmail, "user@example.com", token);
-
-        assertFalse(isValid);
+        // Case-sensitive: "User@Example.com" != "user@example.com"
+        assertFalse(jwtService.validateToken(jwtService.extractEmail(token), "user@example.com", token));
     }
 
     @Test
-    void generateTokenCreatesTokenWithCorrectStructure() {
-        String email = "test@example.com";
-        String token = jwtService.generateToken(email, new HashMap<>());
+    void validateTokenReturnsFalseForTokenWithWrongSignature() {
+        // Valid HS512 structure but signed with a different key — Nimbus verifier rejects it
+        String tampered = "eyJhbGciOiJIUzUxMiJ9" +
+                ".eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwiaXNzIjoidGVzdC1pc3N1ZXIiLCJleHAiOjk5OTk5OTk5OTl9" +
+                ".AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
-        assertNotNull(token);
-        assertTrue(token.matches("^[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$"));
+        assertFalse(jwtService.validateToken("user@example.com", "user@example.com", tampered));
+    }
+
+    @Test
+    void validateTokenReturnsFalseForMalformedToken() {
+        assertFalse(jwtService.validateToken("user@example.com", "user@example.com", "not.a.jwt"));
     }
 }
-
