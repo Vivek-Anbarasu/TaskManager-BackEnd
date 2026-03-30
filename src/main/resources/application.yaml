@@ -17,6 +17,9 @@ rate:
 spring:
   application:
     name: taskmanager-app
+  threads:
+    virtual:
+      enabled: true   # Use virtual threads (Project Loom) for all request-handling threads
   datasource:
     url: jdbc:postgresql://127.0.0.1:5432/taskdb
     username: postgres
