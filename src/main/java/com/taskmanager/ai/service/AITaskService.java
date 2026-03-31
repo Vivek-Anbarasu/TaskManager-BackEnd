@@ -1,5 +1,6 @@
 package com.taskmanager.ai.service;
 
+import com.taskmanager.api.dto.GetTaskResponse;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
@@ -7,7 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * AI Task Service — AI-powered features for the Task Management Application.
@@ -15,6 +18,7 @@ import java.util.function.Supplier;
  * <ul>
  *   <li><b>Feature 1</b> — Description Generator: Prompt Engineering, LLM text generation.</li>
  *   <li><b>Feature 2</b> — Status Suggester: Structured JSON output from LLM.</li>
+ *   <li><b>Feature 3</b> — Task Summarizer: RAG pattern — DB data injected into LLM context.</li>
  * </ul>
  *
  * <p>Every LLM call is wrapped with a Micrometer {@link Timer} so AI response
@@ -100,12 +104,91 @@ public class AITaskService {
                     {"status": "<STATUS>", "reason": "<REASON>"}
                     """.formatted(title, description);
 
-            return chatClient.prompt()
+            String raw = chatClient.prompt()
                     .system("You are a JSON API. You ONLY output a single valid JSON object. "
                             + "Never write any text, explanation, or markdown before or after the JSON.")
                     .user(prompt)
                     .call()
                     .content();
+
+            return extractJson(raw);
         });
+    }
+
+    /**
+     * Feature 3: Summarize all tasks fetched from the database.
+     *
+     * <p>AI Pattern: <b>RAG (Retrieval-Augmented Generation)</b> — the LLM has no direct
+     * access to PostgreSQL. Tasks are fetched first, then injected as plain text into
+     * the prompt so the model reasons over <em>live application data</em> rather than
+     * hallucinating. This is the most important AI pattern to demonstrate in an interview.
+     *
+     * <p>Returns an early fallback message when no tasks exist so the LLM is never
+     * called unnecessarily.
+     *
+     * @param tasks list of all tasks retrieved from the database
+     * @return a concise 5-point executive summary of the current project state
+     */
+    public String summarizeAllTasks(List<GetTaskResponse> tasks) {
+        log.info("AI summarizing {} tasks", tasks.size());
+
+        if (tasks.isEmpty()) {
+            return "No tasks found in the system.";
+        }
+
+        Timer timer = meterRegistry.timer(
+                "ai.task.summarize_all_tasks",
+                "model", "llama3.2:1b",
+                "feature", "task_summarizer");
+
+        return timer.record((Supplier<String>) () -> {
+            String taskList = tasks.stream()
+                    .map(t -> "- [%s] %s: %s".formatted(t.getStatus(), t.getTitle(), t.getDescription()))
+                    .collect(Collectors.joining("\n"));
+
+            String prompt = """
+                    You are a senior project manager. Analyze the following task list and provide:
+                    1. Overall project health (1-2 sentences)
+                    2. Completed work summary
+                    3. Work in progress
+                    4. Potential blockers or risks
+                    5. Recommended next actions
+
+                    Tasks:
+                    %s
+
+                    Be concise and professional.
+                    """.formatted(taskList);
+
+            return chatClient.prompt().user(prompt).call().content();
+        });
+    }
+
+    /**
+     * Extracts the first valid JSON object from the LLM response.
+     *
+     * <p>Small models like Llama 3.2 1B sometimes wrap the JSON in narrative prose
+     * (e.g. "Based on the task, I recommend... {"status":"BLOCKED",...}").
+     * This method strips everything outside the outermost {@code { }} braces so the
+     * caller always receives clean, parseable JSON.
+     *
+     * @param response raw LLM output
+     * @return trimmed JSON object, or a fallback JSON string if no braces found
+     */
+    private String extractJson(String response) {
+        if (response == null || response.isBlank()) {
+            log.warn("LLM returned blank response for suggestStatus — using fallback JSON");
+            return "{\"status\":\"TODO\",\"reason\":\"Unable to determine status from the provided description.\"}";
+        }
+        String trimmed = response.trim();
+        int start = trimmed.indexOf('{');
+        int end   = trimmed.lastIndexOf('}');
+        if (start >= 0 && end > start) {
+            String extracted = trimmed.substring(start, end + 1);
+            log.debug("Extracted JSON from LLM response: {}", extracted);
+            return extracted;
+        }
+        log.warn("LLM response contained no JSON object — returning raw response: {}", trimmed);
+        return trimmed;
     }
 }

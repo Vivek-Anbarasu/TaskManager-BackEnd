@@ -3,6 +3,8 @@ package com.taskmanager.ai.controller;
 import com.taskmanager.ai.dto.AIDescriptionRequest;
 import com.taskmanager.ai.dto.AIStatusRequest;
 import com.taskmanager.ai.service.AITaskService;
+import com.taskmanager.api.dto.GetTaskResponse;
+import com.taskmanager.service.TaskService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,6 +14,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
@@ -19,12 +23,16 @@ import static org.mockito.Mockito.*;
  * Unit tests for {@link AITaskController}.
  * Covers Feature 1: AI Task Description Generator
  *         Feature 2: AI Status Suggester
+ *         Feature 3: AI Task Summarizer (RAG pattern)
  */
 @ExtendWith(MockitoExtension.class)
 class AITaskControllerTest {
 
     @Mock
     private AITaskService aiTaskService;
+
+    @Mock
+    private TaskService taskService;
 
     @InjectMocks
     private AITaskController aiTaskController;
@@ -152,6 +160,82 @@ class AITaskControllerTest {
         assertThat(response.getBody()).isEqualTo(expectedJson);
         assertThat(response.getStatusCode().value()).isEqualTo(200);
     }
-}
 
+    // -------------------------------------------------------------------------
+    // Feature 3: AI Task Summarizer (RAG Pattern)
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Feature 3 — summarizeAllTasks returns 200 with AI summary")
+    void summarizeAllTasksReturns200WithSummary() {
+        // Arrange
+        List<GetTaskResponse> tasks = List.of(
+                GetTaskResponse.builder().status("DONE").title("Add Login").description("Login done").build(),
+                GetTaskResponse.builder().status("IN_PROGRESS").title("Add Dashboard").description("WIP").build()
+        );
+        String expectedSummary = "Project is on track. 1 task completed, 1 in progress.";
+
+        when(taskService.getAllTasks()).thenReturn(tasks);
+        when(aiTaskService.summarizeAllTasks(tasks)).thenReturn(expectedSummary);
+
+        // Act
+        ResponseEntity<String> response = aiTaskController.summarizeAllTasks();
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(expectedSummary);
+    }
+
+    @Test
+    @DisplayName("Feature 3 — summarizeAllTasks fetches tasks from TaskService and passes them to AITaskService")
+    void summarizeAllTasksDelegatesToBothServices() {
+        // Arrange
+        List<GetTaskResponse> tasks = List.of(
+                GetTaskResponse.builder().status("TODO").title("Write Docs").description("Documentation needed").build()
+        );
+        when(taskService.getAllTasks()).thenReturn(tasks);
+        when(aiTaskService.summarizeAllTasks(tasks)).thenReturn("Summary here.");
+
+        // Act
+        aiTaskController.summarizeAllTasks();
+
+        // Assert — TaskService must be called first, then AITaskService with the result
+        verify(taskService, times(1)).getAllTasks();
+        verify(aiTaskService, times(1)).summarizeAllTasks(tasks);
+    }
+
+    @Test
+    @DisplayName("Feature 3 — summarizeAllTasks returns fallback message for empty task list")
+    void summarizeAllTasksReturnsFallbackForEmptyList() {
+        // Arrange
+        when(taskService.getAllTasks()).thenReturn(List.of());
+        when(aiTaskService.summarizeAllTasks(List.of())).thenReturn("No tasks found in the system.");
+
+        // Act
+        ResponseEntity<String> response = aiTaskController.summarizeAllTasks();
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo("No tasks found in the system.");
+    }
+
+    @Test
+    @DisplayName("Feature 3 — summarizeAllTasks returns the exact AITaskService response")
+    void summarizeAllTasksReturnsExactServiceResponse() {
+        // Arrange
+        String exactSummary = "1. Health: Good. 2. Completed: Auth module. 3. In Progress: Dashboard. "
+                + "4. Blockers: None. 5. Next: Deploy to staging.";
+        when(taskService.getAllTasks()).thenReturn(List.of(
+                GetTaskResponse.builder().status("DONE").title("Auth Module").description("JWT implemented").build()
+        ));
+        when(aiTaskService.summarizeAllTasks(anyList())).thenReturn(exactSummary);
+
+        // Act
+        ResponseEntity<String> response = aiTaskController.summarizeAllTasks();
+
+        // Assert
+        assertThat(response.getBody()).isEqualTo(exactSummary);
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+    }
+}
 

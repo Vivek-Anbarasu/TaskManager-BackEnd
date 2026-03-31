@@ -1,5 +1,6 @@
 package com.taskmanager.ai.service;
 
+import com.taskmanager.api.dto.GetTaskResponse;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,20 +10,31 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.ai.chat.client.ChatClient;
+
+import java.util.List;
 import java.util.function.Supplier;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+
 /**
  * Unit tests for {@link AITaskService}.
  * Covers Feature 1: AI Task Description Generator
  *         Feature 2: AI Status Suggester (including extractJson safety-net)
+ *         Feature 3: AI Task Summarizer (RAG pattern)
  *
  * ChatClient is fully mocked — tests run offline without Ollama.
+ *
+ * LENIENT strictness is used because the Feature 3 empty-list test exits before
+ * touching the LLM chain, leaving all other @BeforeEach stubs unused for that test.
  */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class AITaskServiceTest {
     @Mock private ChatClient chatClient;
     @Mock private ChatClient.ChatClientRequestSpec requestSpec;
@@ -158,4 +170,112 @@ class AITaskServiceTest {
                 .contains("<STATUS>")
                 .contains("ONLY this JSON");
     }
+
+    // -------------------------------------------------------------------------
+    // Feature 3: AI Task Summarizer (RAG Pattern)
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Feature 3 - empty task list returns fallback message without calling LLM")
+    void summarizeAllTasksReturnsFallbackForEmptyList() {
+        String result = aiTaskService.summarizeAllTasks(List.of());
+
+        assertThat(result).isEqualTo("No tasks found in the system.");
+        verifyNoInteractions(chatClient);   // LLM must NOT be called for empty input
+    }
+
+    @Test
+    @DisplayName("Feature 3 - non-empty task list calls LLM and returns its content")
+    void summarizeAllTasksCallsLLMAndReturnsContent() {
+        String expectedSummary = "Project is on track. Two tasks completed, one in progress.";
+        when(callSpec.content()).thenReturn(expectedSummary);
+
+        List<GetTaskResponse> tasks = List.of(
+                GetTaskResponse.builder().status("DONE").title("Add Login").description("Login page done").build(),
+                GetTaskResponse.builder().status("IN_PROGRESS").title("Add Dashboard").description("WIP").build()
+        );
+
+        String result = aiTaskService.summarizeAllTasks(tasks);
+
+        assertThat(result).isEqualTo(expectedSummary);
+        verify(chatClient).prompt();
+    }
+
+    @Test
+    @DisplayName("Feature 3 - prompt includes all task fields: status, title, description")
+    void summarizeAllTasksPromptIncludesAllTaskData() {
+        when(callSpec.content()).thenReturn("Summary here.");
+
+        List<GetTaskResponse> tasks = List.of(
+                GetTaskResponse.builder().status("BLOCKED").title("Integrate Payment API").description("Waiting for API keys").build()
+        );
+
+        aiTaskService.summarizeAllTasks(tasks);
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(requestSpec).user(promptCaptor.capture());
+        assertThat(promptCaptor.getValue())
+                .contains("BLOCKED")
+                .contains("Integrate Payment API")
+                .contains("Waiting for API keys")
+                .contains("project manager")
+                .contains("Overall project health");
+    }
+
+    @Test
+    @DisplayName("Feature 3 - prompt includes all 5 structured output sections")
+    void summarizeAllTasksPromptRequestsAllFiveSections() {
+        when(callSpec.content()).thenReturn("Summary.");
+
+        aiTaskService.summarizeAllTasks(
+                List.of(GetTaskResponse.builder().status("TODO").title("T").description("D").build()));
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(requestSpec).user(promptCaptor.capture());
+        assertThat(promptCaptor.getValue())
+                .contains("Overall project health")
+                .contains("Completed work summary")
+                .contains("Work in progress")
+                .contains("Potential blockers")
+                .contains("Recommended next actions");
+    }
+
+    @Test
+    @DisplayName("Feature 3 - Micrometer timer recorded with correct tags")
+    void summarizeAllTasksRecordsMicrometerTimer() {
+        when(callSpec.content()).thenReturn("Summary.");
+
+        aiTaskService.summarizeAllTasks(
+                List.of(GetTaskResponse.builder().status("TODO").title("T").description("D").build()));
+
+        verify(meterRegistry).timer("ai.task.summarize_all_tasks", "model", "llama3.2:1b", "feature", "task_summarizer");
+        verify(timer).record(any(Supplier.class));
+    }
+
+    @Test
+    @DisplayName("Feature 3 - all tasks from the list appear in the prompt")
+    void summarizeAllTasksIncludesMultipleTasksInPrompt() {
+        when(callSpec.content()).thenReturn("Multi-task summary.");
+
+        List<GetTaskResponse> tasks = List.of(
+                GetTaskResponse.builder().status("DONE").title("Setup CI/CD").description("Pipeline configured").build(),
+                GetTaskResponse.builder().status("IN_PROGRESS").title("Write Tests").description("Unit tests in progress").build(),
+                GetTaskResponse.builder().status("BLOCKED").title("Deploy to Prod").description("Waiting for approval").build()
+        );
+
+        aiTaskService.summarizeAllTasks(tasks);
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(requestSpec).user(promptCaptor.capture());
+        String prompt = promptCaptor.getValue();
+        assertThat(prompt)
+                .contains("Setup CI/CD")
+                .contains("Write Tests")
+                .contains("Deploy to Prod")
+                .contains("DONE")
+                .contains("IN_PROGRESS")
+                .contains("BLOCKED");
+    }
 }
+
+

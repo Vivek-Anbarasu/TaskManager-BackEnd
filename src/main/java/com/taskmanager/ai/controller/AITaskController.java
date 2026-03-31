@@ -3,6 +3,8 @@ package com.taskmanager.ai.controller;
 import com.taskmanager.ai.dto.AIDescriptionRequest;
 import com.taskmanager.ai.dto.AIStatusRequest;
 import com.taskmanager.ai.service.AITaskService;
+import com.taskmanager.api.dto.GetTaskResponse;
+import com.taskmanager.service.TaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,10 +14,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 /**
  * AI Task Controller — exposes AI-powered endpoints for task management.
@@ -32,6 +37,13 @@ import org.springframework.web.bind.annotation.RestController;
  *   <li>LLM analyses context and returns a structured JSON status suggestion.</li>
  * </ul>
  *
+ * <p><b>Feature 3:</b> GET /ai/task/summarize
+ * <ul>
+ *   <li>Fetches all tasks from PostgreSQL via {@link TaskService}.</li>
+ *   <li>Injects them as plain text into the LLM prompt (RAG pattern).</li>
+ *   <li>Returns a 5-point executive summary of the current project state.</li>
+ * </ul>
+ *
  * <p>Security: Bearer JWT required. Accessible by USER and ADMIN roles.
  */
 @RestController
@@ -43,6 +55,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AITaskController {
 
     private final AITaskService aiTaskService;
+    private final TaskService taskService;
 
     /**
      * Feature 1: AI Task Description Generator.
@@ -108,6 +121,38 @@ public class AITaskController {
         log.info("POST /ai/task/suggest-status — title: {}", request.getTitle());
         String suggestion = aiTaskService.suggestStatus(request.getTitle(), request.getDescription());
         return ResponseEntity.ok(suggestion);
+    }
+
+    /**
+     * Feature 3: AI Task Summarizer — RAG Pattern.
+     *
+     * <p>Fetches all tasks from the database, injects them as context into the LLM prompt,
+     * and returns a concise executive summary covering project health, completed work,
+     * in-progress items, blockers, and recommended next actions.
+     *
+     * <p><b>AI Pattern:</b> RAG (Retrieval-Augmented Generation) — the most important
+     * AI pattern. The LLM has no direct DB access; tasks are fetched first and injected
+     * as plain text so the model reasons over <em>live data</em>, not hallucinations.
+     *
+     * <p><b>Model:</b> Ollama Llama 3.2 1B (runs locally — no external API calls)
+     *
+     * @return AI-generated 5-point executive summary of all tasks
+     */
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @GetMapping(
+            path = "/summarize",
+            produces = MediaType.TEXT_PLAIN_VALUE)
+    @Operation(
+            summary = "AI: Executive summary of all tasks (RAG pattern)",
+            description = "Fetches all tasks from PostgreSQL and injects them into the LLM context. "
+                    + "Returns a 5-point executive summary: project health, completed work, "
+                    + "work in progress, blockers/risks, and recommended next actions. "
+                    + "Demonstrates the RAG (Retrieval-Augmented Generation) pattern with Ollama Llama 3.2 1B.")
+    public ResponseEntity<String> summarizeAllTasks() {
+        log.info("GET /ai/task/summarize — fetching all tasks for AI summarization");
+        List<GetTaskResponse> allTasks = taskService.getAllTasks();
+        String summary = aiTaskService.summarizeAllTasks(allTasks);
+        return ResponseEntity.ok(summary);
     }
 }
 
