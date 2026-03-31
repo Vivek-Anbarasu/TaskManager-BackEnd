@@ -1,6 +1,7 @@
 package com.taskmanager.ai.service;
 
 import com.taskmanager.api.dto.GetTaskResponse;
+import com.taskmanager.ai.dto.ChatResponse;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
  *   <li><b>Feature 2</b> — Status Suggester: Structured JSON output from LLM.</li>
  *   <li><b>Feature 3</b> — Task Summarizer: RAG pattern — DB data injected into LLM context.</li>
  *   <li><b>Feature 4</b> — Task Breakdown: Chain-of-thought prompting, structured list output.</li>
+ *   <li><b>Feature 5</b> — Conversational Chatbot: RAG pattern with dynamic context injection.</li>
  * </ul>
  *
  * <p>Every LLM call is wrapped with a Micrometer {@link Timer} so AI response
@@ -199,6 +201,55 @@ public class AITaskService {
                     """.formatted(title, description);
 
             return chatClient.prompt().user(prompt).call().content();
+        });
+    }
+
+    /**
+     * Feature 5: Conversational AI over live task data.
+     *
+     * <p>AI Pattern: <b>Conversational AI + RAG</b> — all tasks are fetched from PostgreSQL
+     * by the caller and injected into the prompt as structured context. The LLM is
+     * instructed to answer using <em>only</em> the provided data, preventing hallucination.
+     *
+     * <p>The response bundles the LLM reply together with the number of tasks analysed,
+     * making the RAG scope transparent to the client.
+     *
+     * @param userMessage the natural-language question from the user
+     * @param tasks       all current tasks fetched from the database
+     * @return {@link ChatResponse} containing the LLM answer and tasks-analyzed count
+     */
+    public ChatResponse chat(String userMessage, List<GetTaskResponse> tasks) {
+        log.info("AI chat received message: {}", userMessage);
+
+        Timer timer = meterRegistry.timer(
+                "ai.task.chat",
+                "model", "llama3.2:1b",
+                "feature", "conversational_chatbot");
+
+        return timer.record((Supplier<ChatResponse>) () -> {
+            String context = tasks.stream()
+                    .map(t -> "ID:%d | Status:%s | Title:%s | Description:%s"
+                            .formatted(t.getId(), t.getStatus(), t.getTitle(), t.getDescription()))
+                    .collect(Collectors.joining("\n"));
+
+            String prompt = """
+                    You are a helpful task management assistant. You have access to the following task data.
+                    Answer the user's question using ONLY the data provided below.
+                    If the answer is not in the data, say "I don't have enough information to answer that."
+                    Be concise, friendly, and professional.
+
+                    === CURRENT TASK DATA ===
+                    %s
+                    ========================
+
+                    User Question: %s
+                    """.formatted(context, userMessage);
+
+            String reply = chatClient.prompt().user(prompt).call().content();
+            return ChatResponse.builder()
+                    .reply(reply)
+                    .tasksAnalyzed(tasks.size())
+                    .build();
         });
     }
 

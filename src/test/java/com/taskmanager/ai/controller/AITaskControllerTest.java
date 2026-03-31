@@ -3,6 +3,8 @@ package com.taskmanager.ai.controller;
 import com.taskmanager.ai.dto.AIBreakdownRequest;
 import com.taskmanager.ai.dto.AIDescriptionRequest;
 import com.taskmanager.ai.dto.AIStatusRequest;
+import com.taskmanager.ai.dto.ChatRequest;
+import com.taskmanager.ai.dto.ChatResponse;
 import com.taskmanager.ai.service.AITaskService;
 import com.taskmanager.api.dto.GetTaskResponse;
 import com.taskmanager.service.TaskService;
@@ -26,6 +28,7 @@ import static org.mockito.Mockito.*;
  *         Feature 2: AI Status Suggester
  *         Feature 3: AI Task Summarizer (RAG pattern)
  *         Feature 4: AI Task Breakdown (Chain-of-Thought Prompting)
+ *         Feature 5: AI Conversational Chatbot (RAG + Conversational AI)
  */
 @ExtendWith(MockitoExtension.class)
 class AITaskControllerTest {
@@ -308,6 +311,104 @@ class AITaskControllerTest {
         // Assert
         assertThat(response.getBody()).isEqualTo(exactBreakdown);
         assertThat(response.getStatusCode().value()).isEqualTo(200);
+    }
+
+    // -------------------------------------------------------------------------
+    // Feature 5: AI Conversational Chatbot (RAG + Conversational AI)
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Feature 5 — chat returns 200 with ChatResponse containing reply and tasksAnalyzed")
+    void chatReturns200WithChatResponse() {
+        // Arrange
+        ChatRequest request = new ChatRequest();
+        request.setMessage("How many tasks are IN_PROGRESS?");
+
+        List<GetTaskResponse> tasks = List.of(
+                GetTaskResponse.builder().id(1L).status("IN_PROGRESS").title("Add Dashboard").description("WIP").build()
+        );
+        ChatResponse expectedResponse = ChatResponse.builder()
+                .reply("There is 1 IN_PROGRESS task: Add Dashboard.")
+                .tasksAnalyzed(1)
+                .build();
+
+        when(taskService.getAllTasks()).thenReturn(tasks);
+        when(aiTaskService.chat("How many tasks are IN_PROGRESS?", tasks)).thenReturn(expectedResponse);
+
+        // Act
+        ResponseEntity<ChatResponse> response = aiTaskController.chat(request);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getReply()).isEqualTo("There is 1 IN_PROGRESS task: Add Dashboard.");
+        assertThat(response.getBody().getTasksAnalyzed()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Feature 5 — chat fetches all tasks then delegates message + tasks to AITaskService")
+    void chatFetchesAllTasksAndDelegatesToAIService() {
+        // Arrange
+        ChatRequest request = new ChatRequest();
+        request.setMessage("Are there any blocked tasks?");
+
+        List<GetTaskResponse> tasks = List.of(
+                GetTaskResponse.builder().id(1L).status("BLOCKED").title("Deploy to Prod").description("Needs approval").build()
+        );
+        when(taskService.getAllTasks()).thenReturn(tasks);
+        when(aiTaskService.chat(anyString(), anyList()))
+                .thenReturn(ChatResponse.builder().reply("Yes, 1 task is blocked.").tasksAnalyzed(1).build());
+
+        // Act
+        aiTaskController.chat(request);
+
+        // Assert — TaskService must be called first, then AITaskService with both args
+        verify(taskService, times(1)).getAllTasks();
+        verify(aiTaskService, times(1)).chat("Are there any blocked tasks?", tasks);
+    }
+
+    @Test
+    @DisplayName("Feature 5 — chat returns the exact AITaskService ChatResponse")
+    void chatReturnsExactServiceResponse() {
+        // Arrange
+        ChatRequest request = new ChatRequest();
+        request.setMessage("Give me a standup summary.");
+
+        ChatResponse exactResponse = ChatResponse.builder()
+                .reply("2 tasks done, 1 in progress, 0 blocked. Looking good!")
+                .tasksAnalyzed(3)
+                .build();
+        when(taskService.getAllTasks()).thenReturn(List.of());
+        when(aiTaskService.chat(anyString(), anyList())).thenReturn(exactResponse);
+
+        // Act
+        ResponseEntity<ChatResponse> response = aiTaskController.chat(request);
+
+        // Assert
+        assertThat(response.getBody()).isEqualTo(exactResponse);
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+    }
+
+    @Test
+    @DisplayName("Feature 5 — chat passes empty task list to AITaskService when no tasks exist")
+    void chatPassesEmptyTaskListWhenNoTasksExist() {
+        // Arrange
+        ChatRequest request = new ChatRequest();
+        request.setMessage("What should I work on?");
+
+        when(taskService.getAllTasks()).thenReturn(List.of());
+        when(aiTaskService.chat(anyString(), anyList()))
+                .thenReturn(ChatResponse.builder()
+                        .reply("I don't have enough information to answer that.")
+                        .tasksAnalyzed(0)
+                        .build());
+
+        // Act
+        ResponseEntity<ChatResponse> response = aiTaskController.chat(request);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        verify(aiTaskService).chat("What should I work on?", List.of());
     }
 }
 

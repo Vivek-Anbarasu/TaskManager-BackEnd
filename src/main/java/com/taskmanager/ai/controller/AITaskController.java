@@ -3,6 +3,8 @@ package com.taskmanager.ai.controller;
 import com.taskmanager.ai.dto.AIBreakdownRequest;
 import com.taskmanager.ai.dto.AIDescriptionRequest;
 import com.taskmanager.ai.dto.AIStatusRequest;
+import com.taskmanager.ai.dto.ChatRequest;
+import com.taskmanager.ai.dto.ChatResponse;
 import com.taskmanager.ai.service.AITaskService;
 import com.taskmanager.api.dto.GetTaskResponse;
 import com.taskmanager.service.TaskService;
@@ -50,6 +52,13 @@ import java.util.List;
  *   <li>User provides a complex task title and description.</li>
  *   <li>LLM decomposes it into 5–7 actionable subtasks (Chain-of-Thought prompting).</li>
  *   <li>Each subtask is independently completable in 1–2 hours.</li>
+ * </ul>
+ *
+ * <p><b>Feature 5:</b> POST /ai/task/chat
+ * <ul>
+ *   <li>User sends a natural-language question about their tasks.</li>
+ *   <li>All tasks are fetched and injected as context (RAG + Conversational AI).</li>
+ *   <li>Returns a {@link ChatResponse} with the LLM answer and tasks-analyzed count.</li>
  * </ul>
  *
  * <p>Security: Bearer JWT required. Accessible by USER and ADMIN roles.
@@ -195,6 +204,42 @@ public class AITaskController {
         log.info("POST /ai/task/breakdown — title: {}", request.getTitle());
         String breakdown = aiTaskService.breakdownTask(request.getTitle(), request.getDescription());
         return ResponseEntity.ok(breakdown);
+    }
+
+    /**
+     * Feature 5: AI Conversational Chatbot — RAG + Conversational AI.
+     *
+     * <p>Accepts a natural-language question (e.g. <em>"What should I work on next?"</em>
+     * or <em>"Are there any blocked tasks?"</em>), fetches all tasks from the database,
+     * injects them as context, and returns the LLM's answer together with the number
+     * of tasks that were analysed.
+     *
+     * <p><b>AI Pattern:</b> Conversational AI + RAG — the LLM is grounded in live
+     * task data and explicitly instructed to answer using <em>only</em> that data.
+     *
+     * <p><b>Model:</b> Ollama Llama 3.2 1B (runs locally — no external API calls)
+     *
+     * @param request contains the user's natural-language question
+     * @return {@link ChatResponse} with {@code reply} and {@code tasksAnalyzed}
+     */
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PostMapping(
+            path = "/chat",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "AI: Conversational assistant over live task data (RAG + Conversational AI)",
+            description = "Send a natural-language question about your tasks — e.g. 'How many tasks are "
+                    + "IN_PROGRESS?' or 'Are there any blockers?'. All tasks are fetched from PostgreSQL "
+                    + "and injected as context so the LLM answers from live data only. "
+                    + "Returns the reply and how many tasks were analysed.")
+    public ResponseEntity<ChatResponse> chat(
+            @Valid @RequestBody ChatRequest request) {
+
+        log.info("POST /ai/task/chat — message: {}", request.getMessage());
+        List<GetTaskResponse> allTasks = taskService.getAllTasks();
+        ChatResponse response = aiTaskService.chat(request.getMessage(), allTasks);
+        return ResponseEntity.ok(response);
     }
 }
 

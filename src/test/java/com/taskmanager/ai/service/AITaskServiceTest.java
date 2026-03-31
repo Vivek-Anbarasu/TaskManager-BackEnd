@@ -1,5 +1,6 @@
 package com.taskmanager.ai.service;
 
+import com.taskmanager.ai.dto.ChatResponse;
 import com.taskmanager.api.dto.GetTaskResponse;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -27,6 +28,8 @@ import static org.mockito.Mockito.*;
  * Covers Feature 1: AI Task Description Generator
  *         Feature 2: AI Status Suggester (including extractJson safety-net)
  *         Feature 3: AI Task Summarizer (RAG pattern)
+ *         Feature 4: AI Task Breakdown (Chain-of-Thought Prompting)
+ *         Feature 5: AI Conversational Chatbot (RAG + Conversational AI)
  *
  * ChatClient is fully mocked — tests run offline without Ollama.
  *
@@ -356,6 +359,114 @@ class AITaskServiceTest {
 
         assertThat(aiTaskService.breakdownTask("Build Payments API", "Full payment flow implementation."))
                 .isEqualTo(llmOutput);
+    }
+
+    // -------------------------------------------------------------------------
+    // Feature 5: AI Conversational Chatbot (RAG + Conversational AI)
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Feature 5 - should return a ChatResponse with reply and correct tasksAnalyzed count")
+    void chatReturnsResponseWithReplyAndTaskCount() {
+        when(callSpec.content()).thenReturn("You have 2 IN_PROGRESS tasks.");
+
+        List<GetTaskResponse> tasks = List.of(
+                GetTaskResponse.builder().id(1L).status("IN_PROGRESS").title("Add Login").description("Login UI").build(),
+                GetTaskResponse.builder().id(2L).status("IN_PROGRESS").title("Add Dashboard").description("Dashboard WIP").build()
+        );
+
+        ChatResponse result = aiTaskService.chat("How many tasks are IN_PROGRESS?", tasks);
+
+        assertThat(result.getReply()).isEqualTo("You have 2 IN_PROGRESS tasks.");
+        assertThat(result.getTasksAnalyzed()).isEqualTo(2);
+        verify(chatClient).prompt();
+    }
+
+    @Test
+    @DisplayName("Feature 5 - prompt must include the user message and all task context fields")
+    void chatPromptIncludesUserMessageAndTaskContext() {
+        when(callSpec.content()).thenReturn("There are no blocked tasks.");
+
+        List<GetTaskResponse> tasks = List.of(
+                GetTaskResponse.builder().id(42L).status("BLOCKED").title("Deploy to Prod").description("Needs approval").build()
+        );
+
+        aiTaskService.chat("Are there any blocked tasks?", tasks);
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(requestSpec).user(promptCaptor.capture());
+        assertThat(promptCaptor.getValue())
+                .contains("Are there any blocked tasks?")
+                .contains("ID:42")
+                .contains("BLOCKED")
+                .contains("Deploy to Prod")
+                .contains("Needs approval");
+    }
+
+    @Test
+    @DisplayName("Feature 5 - prompt must instruct LLM to use ONLY the provided data")
+    void chatPromptInstructsLLMToUseOnlyProvidedData() {
+        when(callSpec.content()).thenReturn("Some answer.");
+
+        aiTaskService.chat("What should I work on next?",
+                List.of(GetTaskResponse.builder().id(1L).status("TODO").title("T").description("D").build()));
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(requestSpec).user(promptCaptor.capture());
+        assertThat(promptCaptor.getValue())
+                .contains("ONLY the data provided")
+                .contains("CURRENT TASK DATA")
+                .contains("task management assistant");
+    }
+
+    @Test
+    @DisplayName("Feature 5 - tasksAnalyzed must equal zero when task list is empty")
+    void chatWithEmptyTaskListReturnsZeroTasksAnalyzed() {
+        when(callSpec.content()).thenReturn("I don't have enough information to answer that.");
+
+        ChatResponse result = aiTaskService.chat("What should I work on?", List.of());
+
+        assertThat(result.getTasksAnalyzed()).isZero();
+        assertThat(result.getReply()).isNotBlank();
+        // LLM IS still called even for empty task list (unlike Feature 3)
+        verify(chatClient).prompt();
+    }
+
+    @Test
+    @DisplayName("Feature 5 - context must include all tasks formatted as ID | Status | Title | Description")
+    void chatContextFormatsAllTasksCorrectly() {
+        when(callSpec.content()).thenReturn("Answer here.");
+
+        List<GetTaskResponse> tasks = List.of(
+                GetTaskResponse.builder().id(10L).status("DONE").title("Setup CI").description("Pipeline done").build(),
+                GetTaskResponse.builder().id(11L).status("TODO").title("Write Docs").description("Docs needed").build()
+        );
+
+        aiTaskService.chat("Give me a status report.", tasks);
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(requestSpec).user(promptCaptor.capture());
+        String prompt = promptCaptor.getValue();
+        assertThat(prompt)
+                .contains("ID:10")
+                .contains("Status:DONE")
+                .contains("Title:Setup CI")
+                .contains("Description:Pipeline done")
+                .contains("ID:11")
+                .contains("Status:TODO")
+                .contains("Title:Write Docs");
+    }
+
+    @Test
+    @DisplayName("Feature 5 - Micrometer timer recorded with correct tags")
+    void chatRecordsMicrometerTimer() {
+        when(callSpec.content()).thenReturn("Everything looks good.");
+
+        aiTaskService.chat("Give me a standup summary.",
+                List.of(GetTaskResponse.builder().id(1L).status("IN_PROGRESS").title("API").description("WIP").build()));
+
+        verify(meterRegistry).timer("ai.task.chat", "model", "llama3.2:1b", "feature", "conversational_chatbot");
+        verify(timer).record(any(Supplier.class));
     }
 }
 
