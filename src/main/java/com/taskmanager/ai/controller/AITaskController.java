@@ -5,8 +5,11 @@ import com.taskmanager.ai.dto.AIDescriptionRequest;
 import com.taskmanager.ai.dto.AIStatusRequest;
 import com.taskmanager.ai.dto.ChatRequest;
 import com.taskmanager.ai.dto.ChatResponse;
+import com.taskmanager.ai.dto.ImportDocumentResponse;
 import com.taskmanager.ai.service.AITaskService;
+import com.taskmanager.ai.service.DocumentTaskImportService;
 import com.taskmanager.api.dto.GetTaskResponse;
+import com.taskmanager.exception.BadRequest;
 import com.taskmanager.service.TaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -21,9 +24,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * AI Task Controller — exposes AI-powered endpoints for task management.
@@ -61,6 +67,13 @@ import java.util.List;
  *   <li>Returns a {@link ChatResponse} with the LLM answer and tasks-analyzed count.</li>
  * </ul>
  *
+ * <p><b>Feature 6:</b> POST /ai/task/import-document
+ * <ul>
+ *   <li>ADMIN uploads a PDF or Word document (sprint plan, requirements, meeting notes).</li>
+ *   <li>Spring AI extracts text; LLM parses tasks as structured JSON.</li>
+ *   <li>Tasks are persisted to PostgreSQL; saved IDs are returned.</li>
+ * </ul>
+ *
  * <p>Security: Bearer JWT required. Accessible by USER and ADMIN roles.
  */
 @RestController
@@ -73,6 +86,11 @@ public class AITaskController {
 
     private final AITaskService aiTaskService;
     private final TaskService taskService;
+    private final DocumentTaskImportService documentTaskImportService;
+
+    /** File extensions accepted by the document-import endpoint. */
+    private static final Set<String> ALLOWED_EXTENSIONS =
+            Set.of(".pdf", ".docx", ".doc", ".xlsx", ".xls");
 
     /**
      * Feature 1: AI Task Description Generator.
@@ -240,6 +258,58 @@ public class AITaskController {
         List<GetTaskResponse> allTasks = taskService.getAllTasks();
         ChatResponse response = aiTaskService.chat(request.getMessage(), allTasks);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Feature 6: Document Ingestion — PDF / Word → Tasks (ADMIN only).
+     *
+     * <p>Upload a PDF or Word document (sprint planning doc, requirements spec, meeting notes).
+     * Spring AI reads the file text, Ollama extracts all tasks as structured JSON, and each task
+     * is persisted to PostgreSQL. Returns the message and IDs of all created tasks.
+     *
+     * <p><b>Supported formats:</b> PDF, Word (.docx/.doc), Excel, plain text.
+     *
+     * <p><b>AI Pattern:</b> Document Ingestion + Structured Extraction — no pgvector needed.
+     * This is regular relational storage after LLM-powered parsing.
+     *
+     * <p><b>Model:</b> Ollama Llama 3.2 1B (runs locally — no external API calls)
+     *
+     * @param file the uploaded PDF or Word document
+     * @return {@link ImportDocumentResponse} with success message and list of created task IDs
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(
+            path = "/import-document",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "AI: Import tasks from a PDF or Word document (ADMIN only)",
+            description = "Upload a PDF or Word file — the AI extracts all tasks/action items and saves "
+                    + "them directly to PostgreSQL. Demonstrates Spring AI DocumentReaders, structured "
+                    + "LLM extraction, and file-upload handling. Requires ADMIN role.")
+    public ResponseEntity<ImportDocumentResponse> importDocument(
+            @RequestParam("file") MultipartFile file) throws Exception {
+
+        if (file.isEmpty()) {
+            throw new BadRequest("Uploaded file is empty");
+        }
+
+        // Validate file extension — reject anything that is not PDF, Word, or Excel
+        String filename = file.getOriginalFilename() != null
+                ? file.getOriginalFilename().toLowerCase() : "";
+        boolean validExtension = ALLOWED_EXTENSIONS.stream().anyMatch(filename::endsWith);
+        if (!validExtension) {
+            throw new BadRequest(
+                    "Unsupported file format. Accepted formats: PDF (.pdf), Word (.docx/.doc), Excel (.xlsx/.xls)");
+        }
+
+        log.info("POST /ai/task/import-document — file: {}, size: {} bytes",
+                file.getOriginalFilename(), file.getSize());
+        List<Long> savedIds = documentTaskImportService.importTasksFromDocument(file);
+        return ResponseEntity.ok(ImportDocumentResponse.builder()
+                .message("Successfully imported " + savedIds.size() + " tasks from document")
+                .taskIds(savedIds)
+                .build());
     }
 }
 

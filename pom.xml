@@ -87,6 +87,16 @@
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-ollama</artifactId>
         </dependency>
+        <!-- Feature 6: PDF Document Reader (Spring AI) -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-pdf-document-reader</artifactId>
+        </dependency>
+        <!-- Feature 6: Word / Excel / other formats via Apache Tika -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-tika-document-reader</artifactId>
+        </dependency>
         <!-- Prometheus / Micrometer metrics export -->
         <dependency>
             <groupId>io.micrometer</groupId>

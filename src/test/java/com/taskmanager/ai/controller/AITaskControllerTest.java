@@ -5,6 +5,8 @@ import com.taskmanager.ai.dto.AIDescriptionRequest;
 import com.taskmanager.ai.dto.AIStatusRequest;
 import com.taskmanager.ai.dto.ChatRequest;
 import com.taskmanager.ai.dto.ChatResponse;
+import com.taskmanager.ai.dto.ImportDocumentResponse;
+import com.taskmanager.ai.service.DocumentTaskImportService;
 import com.taskmanager.ai.service.AITaskService;
 import com.taskmanager.api.dto.GetTaskResponse;
 import com.taskmanager.service.TaskService;
@@ -16,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -29,15 +32,15 @@ import static org.mockito.Mockito.*;
  *         Feature 3: AI Task Summarizer (RAG pattern)
  *         Feature 4: AI Task Breakdown (Chain-of-Thought Prompting)
  *         Feature 5: AI Conversational Chatbot (RAG + Conversational AI)
+ *         Feature 6: Document Ingestion — PDF/Word → Tasks
  */
 @ExtendWith(MockitoExtension.class)
 class AITaskControllerTest {
 
-    @Mock
-    private AITaskService aiTaskService;
-
-    @Mock
-    private TaskService taskService;
+    @Mock private AITaskService aiTaskService;
+    @Mock private TaskService taskService;
+    @Mock private DocumentTaskImportService documentTaskImportService;
+    @Mock private MultipartFile multipartFile;
 
     @InjectMocks
     private AITaskController aiTaskController;
@@ -409,6 +412,133 @@ class AITaskControllerTest {
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         verify(aiTaskService).chat("What should I work on?", List.of());
+    }
+
+    // -------------------------------------------------------------------------
+    // Feature 6: Document Ingestion — PDF/Word → Tasks
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Feature 6 — importDocument returns 200 with ImportDocumentResponse")
+    void importDocumentReturns200WithImportDocumentResponse() throws Exception {
+        // Arrange
+        when(multipartFile.isEmpty()).thenReturn(false);
+        when(multipartFile.getOriginalFilename()).thenReturn("sprint-plan.pdf");
+        when(multipartFile.getSize()).thenReturn(1024L);
+        when(documentTaskImportService.importTasksFromDocument(multipartFile))
+                .thenReturn(List.of(1L, 2L, 3L));
+
+        // Act
+        ResponseEntity<ImportDocumentResponse> response = aiTaskController.importDocument(multipartFile);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getTaskIds()).containsExactly(1L, 2L, 3L);
+        assertThat(response.getBody().getMessage()).contains("3");
+    }
+
+    @Test
+    @DisplayName("Feature 6 — importDocument delegates to DocumentTaskImportService")
+    void importDocumentDelegatesToDocumentTaskImportService() throws Exception {
+        // Arrange
+        when(multipartFile.isEmpty()).thenReturn(false);
+        when(multipartFile.getSize()).thenReturn(2048L);
+        when(multipartFile.getOriginalFilename()).thenReturn("requirements.docx");
+        when(documentTaskImportService.importTasksFromDocument(multipartFile))
+                .thenReturn(List.of(10L, 11L));
+
+        // Act
+        aiTaskController.importDocument(multipartFile);
+
+        // Assert — service must be called with the file
+        verify(documentTaskImportService, times(1)).importTasksFromDocument(multipartFile);
+    }
+
+    @Test
+    @DisplayName("Feature 6 — importDocument throws BadRequest when file is empty")
+    void importDocumentThrowsBadRequestForEmptyFile() {
+        // Arrange
+        when(multipartFile.isEmpty()).thenReturn(true);
+
+        // Act & Assert
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.taskmanager.exception.BadRequest.class,
+                () -> aiTaskController.importDocument(multipartFile));
+
+        verifyNoInteractions(documentTaskImportService);
+    }
+
+    @Test
+    @DisplayName("Feature 6 — importDocument returns the exact list of saved task IDs")
+    void importDocumentReturnsExactSavedTaskIds() throws Exception {
+        // Arrange
+        when(multipartFile.isEmpty()).thenReturn(false);
+        when(multipartFile.getSize()).thenReturn(512L);
+        when(multipartFile.getOriginalFilename()).thenReturn("notes.pdf");
+        List<Long> expectedIds = List.of(100L, 200L, 300L, 400L, 500L);
+        when(documentTaskImportService.importTasksFromDocument(multipartFile))
+                .thenReturn(expectedIds);
+
+        // Act
+        ResponseEntity<ImportDocumentResponse> response = aiTaskController.importDocument(multipartFile);
+
+        // Assert
+        assertThat(response.getBody().getTaskIds()).isEqualTo(expectedIds);
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+    }
+
+    @Test
+    @DisplayName("Feature 6 — importDocument throws BadRequest for unsupported file type (e.g. .exe)")
+    void importDocumentThrowsBadRequestForUnsupportedFileType() {
+        // Arrange — browser uploads a file with an extension not in the allowed list
+        when(multipartFile.isEmpty()).thenReturn(false);
+        when(multipartFile.getOriginalFilename()).thenReturn("malware.exe");
+
+        // Act & Assert — service must never be called
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.taskmanager.exception.BadRequest.class,
+                () -> aiTaskController.importDocument(multipartFile));
+
+        verifyNoInteractions(documentTaskImportService);
+    }
+
+    @Test
+    @DisplayName("Feature 6 — importDocument accepts .xlsx file and delegates to service")
+    void importDocumentAcceptsXlsxFile() throws Exception {
+        // Arrange — backlog-tasks.xlsx from the sample-documents folder
+        when(multipartFile.isEmpty()).thenReturn(false);
+        when(multipartFile.getOriginalFilename()).thenReturn("backlog-tasks.xlsx");
+        when(multipartFile.getSize()).thenReturn(3809L);
+        when(documentTaskImportService.importTasksFromDocument(multipartFile))
+                .thenReturn(List.of(1L, 2L, 3L));
+
+        // Act
+        ResponseEntity<ImportDocumentResponse> response = aiTaskController.importDocument(multipartFile);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().getTaskIds()).containsExactly(1L, 2L, 3L);
+        verify(documentTaskImportService).importTasksFromDocument(multipartFile);
+    }
+
+    @Test
+    @DisplayName("Feature 6 — importDocument accepts .docx file and delegates to service")
+    void importDocumentAcceptsDocxFile() throws Exception {
+        // Arrange — sprint-tasks.docx from the sample-documents folder
+        when(multipartFile.isEmpty()).thenReturn(false);
+        when(multipartFile.getOriginalFilename()).thenReturn("sprint-tasks.docx");
+        when(multipartFile.getSize()).thenReturn(2749L);
+        when(documentTaskImportService.importTasksFromDocument(multipartFile))
+                .thenReturn(List.of(7L, 8L));
+
+        // Act
+        ResponseEntity<ImportDocumentResponse> response = aiTaskController.importDocument(multipartFile);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().getTaskIds()).containsExactly(7L, 8L);
+        verify(documentTaskImportService).importTasksFromDocument(multipartFile);
     }
 }
 
