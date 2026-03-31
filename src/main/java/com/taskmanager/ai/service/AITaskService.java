@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
  *   <li><b>Feature 1</b> — Description Generator: Prompt Engineering, LLM text generation.</li>
  *   <li><b>Feature 2</b> — Status Suggester: Structured JSON output from LLM.</li>
  *   <li><b>Feature 3</b> — Task Summarizer: RAG pattern — DB data injected into LLM context.</li>
+ *   <li><b>Feature 4</b> — Task Breakdown: Chain-of-thought prompting, structured list output.</li>
  * </ul>
  *
  * <p>Every LLM call is wrapped with a Micrometer {@link Timer} so AI response
@@ -159,6 +160,43 @@ public class AITaskService {
 
                     Be concise and professional.
                     """.formatted(taskList);
+
+            return chatClient.prompt().user(prompt).call().content();
+        });
+    }
+
+    /**
+     * Feature 4: Break a complex task into actionable subtasks.
+     *
+     * <p>AI Pattern: <b>Chain-of-Thought Prompting</b> — the prompt instructs the model
+     * to reason step-by-step, producing 5–7 specific subtasks each completable in 1–2 hours.
+     * The output format is constrained to a numbered list so the response is immediately
+     * usable in sprint planning and story-point estimation.
+     *
+     * @param title       the complex task title
+     * @param description the full task description
+     * @return a numbered list of 5–7 actionable subtasks as plain text
+     */
+    public String breakdownTask(String title, String description) {
+        log.info("AI breaking down task: {}", title);
+
+        Timer timer = meterRegistry.timer(
+                "ai.task.breakdown",
+                "model", "llama3.2:1b",
+                "feature", "task_breakdown");
+
+        return timer.record((Supplier<String>) () -> {
+            String prompt = """
+                    You are a senior software engineer and scrum master.
+                    Break down this task into 5-7 specific, actionable subtasks.
+                    Each subtask must be independently completable in 1-2 hours.
+                    Each subtask should have a clear action verb and specific deliverable.
+
+                    Task Title: %s
+                    Task Description: %s
+
+                    Format your response as a numbered list only. No introduction or conclusion text.
+                    """.formatted(title, description);
 
             return chatClient.prompt().user(prompt).call().content();
         });

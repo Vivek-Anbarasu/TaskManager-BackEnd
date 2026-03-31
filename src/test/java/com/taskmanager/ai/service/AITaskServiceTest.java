@@ -276,6 +276,87 @@ class AITaskServiceTest {
                 .contains("IN_PROGRESS")
                 .contains("BLOCKED");
     }
+
+    // -------------------------------------------------------------------------
+    // Feature 4: AI Task Breakdown (Chain-of-Thought Prompting)
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Feature 4 - should return a non-blank numbered subtask list")
+    void breakdownTaskReturnsSubtaskList() {
+        String expectedBreakdown = "1. Set up project structure\n2. Implement authentication\n3. Write unit tests";
+        when(callSpec.content()).thenReturn(expectedBreakdown);
+
+        String result = aiTaskService.breakdownTask(
+                "Build REST API", "Create a RESTful API with JWT authentication.");
+
+        assertThat(result).isNotBlank().isEqualTo(expectedBreakdown);
+        verify(chatClient).prompt();
+    }
+
+    @Test
+    @DisplayName("Feature 4 - prompt must include both title and description")
+    void breakdownTaskPromptIncludesTitleAndDescription() {
+        when(callSpec.content()).thenReturn("1. Define schema\n2. Implement endpoints");
+
+        aiTaskService.breakdownTask("Design Database Schema", "Model all entities with proper relationships.");
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(requestSpec).user(promptCaptor.capture());
+        assertThat(promptCaptor.getValue())
+                .contains("Design Database Schema")
+                .contains("Model all entities with proper relationships.");
+    }
+
+    @Test
+    @DisplayName("Feature 4 - prompt must request 5-7 subtasks completable in 1-2 hours")
+    void breakdownTaskPromptRequestsSubtaskScopeAndSize() {
+        when(callSpec.content()).thenReturn("1. Step one");
+
+        aiTaskService.breakdownTask("Any Task", "Any description.");
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(requestSpec).user(promptCaptor.capture());
+        assertThat(promptCaptor.getValue())
+                .contains("5-7")
+                .contains("1-2 hours")
+                .contains("numbered list");
+    }
+
+    @Test
+    @DisplayName("Feature 4 - prompt must mention senior engineer and scrum master roles")
+    void breakdownTaskPromptMentionsSeniorEngineerAndScrumMaster() {
+        when(callSpec.content()).thenReturn("1. Step one");
+
+        aiTaskService.breakdownTask("Any Task", "Any description.");
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(requestSpec).user(promptCaptor.capture());
+        assertThat(promptCaptor.getValue())
+                .contains("senior software engineer")
+                .contains("scrum master");
+    }
+
+    @Test
+    @DisplayName("Feature 4 - Micrometer timer recorded with correct tags")
+    void breakdownTaskRecordsMicrometerTimer() {
+        when(callSpec.content()).thenReturn("1. Step one\n2. Step two");
+
+        aiTaskService.breakdownTask("Deploy Microservices", "Deploy all services to Kubernetes.");
+
+        verify(meterRegistry).timer("ai.task.breakdown", "model", "llama3.2:1b", "feature", "task_breakdown");
+        verify(timer).record(any(Supplier.class));
+    }
+
+    @Test
+    @DisplayName("Feature 4 - should return the exact LLM content without modification")
+    void breakdownTaskReturnsExactLLMContent() {
+        String llmOutput = "1. Create API contract\n2. Implement controller\n3. Add validation\n4. Write tests\n5. Deploy";
+        when(callSpec.content()).thenReturn(llmOutput);
+
+        assertThat(aiTaskService.breakdownTask("Build Payments API", "Full payment flow implementation."))
+                .isEqualTo(llmOutput);
+    }
 }
 
 

@@ -1,5 +1,6 @@
 package com.taskmanager.ai.controller;
 
+import com.taskmanager.ai.dto.AIBreakdownRequest;
 import com.taskmanager.ai.dto.AIDescriptionRequest;
 import com.taskmanager.ai.dto.AIStatusRequest;
 import com.taskmanager.ai.service.AITaskService;
@@ -24,6 +25,7 @@ import static org.mockito.Mockito.*;
  * Covers Feature 1: AI Task Description Generator
  *         Feature 2: AI Status Suggester
  *         Feature 3: AI Task Summarizer (RAG pattern)
+ *         Feature 4: AI Task Breakdown (Chain-of-Thought Prompting)
  */
 @ExtendWith(MockitoExtension.class)
 class AITaskControllerTest {
@@ -235,6 +237,76 @@ class AITaskControllerTest {
 
         // Assert
         assertThat(response.getBody()).isEqualTo(exactSummary);
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+    }
+
+    // -------------------------------------------------------------------------
+    // Feature 4: AI Task Breakdown (Chain-of-Thought Prompting)
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Feature 4 — breakdownTask returns 200 with subtask list")
+    void breakdownTaskReturns200WithSubtaskList() {
+        // Arrange
+        AIBreakdownRequest request = new AIBreakdownRequest();
+        request.setTitle("Build REST API");
+        request.setDescription("Create a RESTful API with authentication and CRUD operations.");
+
+        String expectedBreakdown = "1. Define API contract\n2. Implement controllers\n3. Add validation\n"
+                + "4. Write unit tests\n5. Deploy to staging";
+        when(aiTaskService.breakdownTask("Build REST API",
+                "Create a RESTful API with authentication and CRUD operations."))
+                .thenReturn(expectedBreakdown);
+
+        // Act
+        ResponseEntity<String> response = aiTaskController.breakdownTask(request);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(expectedBreakdown);
+        verify(aiTaskService, times(1)).breakdownTask(
+                "Build REST API",
+                "Create a RESTful API with authentication and CRUD operations.");
+    }
+
+    @Test
+    @DisplayName("Feature 4 — breakdownTask delegates both title and description to AITaskService")
+    void breakdownTaskDelegatesToService() {
+        // Arrange
+        AIBreakdownRequest request = new AIBreakdownRequest();
+        request.setTitle("Implement Payment Gateway");
+        request.setDescription("Integrate Stripe API with webhook handling and retry logic.");
+
+        when(aiTaskService.breakdownTask(anyString(), anyString()))
+                .thenReturn("1. Set up Stripe SDK\n2. Implement payment intent creation");
+
+        // Act
+        aiTaskController.breakdownTask(request);
+
+        // Assert — both fields must be forwarded to the service
+        verify(aiTaskService).breakdownTask(
+                "Implement Payment Gateway",
+                "Integrate Stripe API with webhook handling and retry logic.");
+    }
+
+    @Test
+    @DisplayName("Feature 4 — breakdownTask returns the exact AITaskService response")
+    void breakdownTaskReturnsExactServiceResponse() {
+        // Arrange
+        AIBreakdownRequest request = new AIBreakdownRequest();
+        request.setTitle("Migrate to Microservices");
+        request.setDescription("Extract monolith modules into independent deployable services.");
+
+        String exactBreakdown = "1. Identify bounded contexts\n2. Define service APIs\n"
+                + "3. Extract user service\n4. Extract order service\n"
+                + "5. Set up API gateway\n6. Configure service discovery\n7. Write integration tests";
+        when(aiTaskService.breakdownTask(anyString(), anyString())).thenReturn(exactBreakdown);
+
+        // Act
+        ResponseEntity<String> response = aiTaskController.breakdownTask(request);
+
+        // Assert
+        assertThat(response.getBody()).isEqualTo(exactBreakdown);
         assertThat(response.getStatusCode().value()).isEqualTo(200);
     }
 }
