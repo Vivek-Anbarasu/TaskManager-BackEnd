@@ -7,7 +7,7 @@ import java.util.Set;
 
 public class StatusValidationLogic implements ConstraintValidator<StatusValidator, String> {
 
-	private static final Set<String> VALID_STATUSES = Set.of("To Do", "In Progress", "Done");
+	private static final Set<String> VALID_STATUSES = Set.of("To Do", "In Progress", "Done", "Blocked");
 
 	@Override
 	public boolean isValid(String status, ConstraintValidatorContext context) {

@@ -17,6 +17,12 @@ rate:
 spring:
   application:
     name: taskmanager-app
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: llama3.2:1b
   threads:
     virtual:
       enabled: true   # Use virtual threads (Project Loom) for all request-handling threads

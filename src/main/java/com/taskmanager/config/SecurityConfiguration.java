@@ -48,6 +48,7 @@ public class SecurityConfiguration {
 				.authorizeHttpRequests(auth -> auth
                         .requestMatchers("/user/**","/v3/api-docs/**", "/swagger-ui/**","/actuator/**").permitAll()
                         .requestMatchers("/task/**").authenticated()
+                        .requestMatchers("/ai/**").authenticated()
                         .anyRequest().authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())

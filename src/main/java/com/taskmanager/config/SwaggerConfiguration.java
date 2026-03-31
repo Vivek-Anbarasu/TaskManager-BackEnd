@@ -95,6 +95,7 @@ public class SwaggerConfiguration {
 
         openAPI.setComponents(components);
 
+
         // Add API information
         openAPI.info(new Info()
             .title("Task Management Application API")
