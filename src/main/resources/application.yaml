@@ -93,7 +93,19 @@ management:
       slo:
         http.server.requests: 50ms,100ms,200ms,500ms,1s
 
+# For testing purpose only as Ingress(NGINX) terminates HTTPS decrypts traffic, passing HTTP to backend pods.
+#server:
+#  port: 8443
+#  http2:
+#    enabled: true  # HTTP/2 over TLS (h2) - requires SSL, supported by all modern browsers
+#  ssl:
+#    enabled: true
+#    key-store: classpath:keystore.p12   # Self-signed cert for local development
+#    key-store-password: changeit
+#    key-store-type: PKCS12
+#    key-alias: taskmanager
+
 # CORS configuration (externalized)
 cors:
-  allowed-origins: http://localhost:5173,http://localhost:3000,http://localhost:*
+  allowed-origins: http://localhost:5173,https://localhost:5173
   allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
