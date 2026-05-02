@@ -67,6 +67,9 @@ logging:
     root: INFO                                              # Default level for all packages
     com.taskmanager: DEBUG                                  # Application package - DEBUG for development
 
+app:
+  version: 1.0-RELEASE   # Matches pom.xml <version> — update together on each release
+
 management:
   endpoints:
     health:
@@ -80,6 +83,7 @@ management:
           - "metrics"
           - "env"
           - "prometheus"
+          - "app-info"   # Custom endpoint → GET /actuator/app-info
   prometheus:
     metrics:
       export:
